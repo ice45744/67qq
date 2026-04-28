@@ -3,7 +3,10 @@ import { Category, MenuItem, Order, ShopSettings } from './types';
 
 export type { Category, MenuItem, CartItem, Order, ShopSettings } from './types';
 
-const DEFAULT_CATEGORIES: Category[] = [];
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'cat-menu', name: 'เมนู', sortOrder: 1 },
+  { id: 'cat-topping', name: 'ท็อปปิ้ง', sortOrder: 2 },
+];
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [];
 
@@ -51,7 +54,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 }
 
 export function useCategories() {
-  const [categories, setCategories] = useLocalStorage<Category[]>('pos_categories_v2', DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useLocalStorage<Category[]>('pos_categories_v3', DEFAULT_CATEGORIES);
   const addCategory = (cat: Category) => setCategories(prev => [...prev, cat].sort((a,b) => a.sortOrder - b.sortOrder));
   const updateCategory = (cat: Category) => setCategories(prev => prev.map(c => c.id === cat.id ? cat : c).sort((a,b) => a.sortOrder - b.sortOrder));
   const deleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
@@ -59,7 +62,7 @@ export function useCategories() {
 }
 
 export function useMenu() {
-  const [menuItems, setMenuItems] = useLocalStorage<MenuItem[]>('pos_menu_items_v2', DEFAULT_MENU_ITEMS);
+  const [menuItems, setMenuItems] = useLocalStorage<MenuItem[]>('pos_menu_items_v3', DEFAULT_MENU_ITEMS);
   const addMenuItem = (item: MenuItem) => setMenuItems(prev => [...prev, item]);
   const updateMenuItem = (item: MenuItem) => setMenuItems(prev => prev.map(m => m.id === item.id ? item : m));
   const deleteMenuItem = (id: string) => setMenuItems(prev => prev.filter(m => m.id !== id));
