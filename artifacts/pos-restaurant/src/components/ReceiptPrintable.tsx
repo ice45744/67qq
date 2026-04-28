@@ -1,130 +1,210 @@
 import { forwardRef } from "react";
-import { Order, ShopSettings, formatCurrency, formatDate } from "@/lib/store";
+import { Order, ShopSettings, formatDate } from "@/lib/store";
 
 interface ReceiptPrintableProps {
   order: Order;
   settings: ShopSettings;
 }
 
+const RECEIPT_FONT = "'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif";
+
+function QueueTicket({ order, settings }: ReceiptPrintableProps) {
+  return (
+    <div
+      className="receipt-section"
+      style={{
+        width: "302px",
+        maxWidth: "302px",
+        margin: "0 auto",
+        background: "#fff",
+        color: "#000",
+        padding: "16px 12px",
+        fontFamily: RECEIPT_FONT,
+        fontSize: "14px",
+        lineHeight: 1.35,
+      }}
+    >
+      <div style={{ textAlign: "center", marginBottom: "8px" }}>
+        <div style={{ fontWeight: 700, fontSize: "16px" }}>{settings.name}</div>
+        <div style={{ fontSize: "12px", marginTop: "2px" }}>** ใบคิว / สำหรับครัว **</div>
+      </div>
+
+      <div
+        style={{
+          textAlign: "center",
+          border: "2px solid #000",
+          padding: "12px 8px",
+          margin: "8px 0",
+        }}
+      >
+        <div style={{ fontSize: "13px", fontWeight: 600 }}>หมายเลขคิว</div>
+        <div
+          style={{
+            fontSize: "72px",
+            fontWeight: 800,
+            lineHeight: 1,
+            margin: "4px 0",
+            letterSpacing: "2px",
+          }}
+        >
+          {order.queueNumber}
+        </div>
+      </div>
+
+      <div style={{ fontSize: "12px", textAlign: "center", marginBottom: "8px" }}>
+        {formatDate(order.createdAt)}
+      </div>
+
+      <div style={{ borderTop: "1px dashed #000", margin: "8px 0" }} />
+
+      <div style={{ fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>รายการอาหาร</div>
+      {order.items.map((item, idx) => (
+        <div
+          key={idx}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: "4px",
+            fontSize: "15px",
+            fontWeight: 600,
+          }}
+        >
+          <span style={{ flex: 1, paddingRight: "8px", wordBreak: "break-word" }}>
+            {item.name}
+            {item.note && (
+              <div style={{ fontSize: "12px", fontWeight: 400, marginTop: "2px" }}>
+                หมายเหตุ: {item.note}
+              </div>
+            )}
+          </span>
+          <span style={{ fontWeight: 800, whiteSpace: "nowrap" }}>x{item.qty}</span>
+        </div>
+      ))}
+
+      <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }} />
+
+      <div style={{ textAlign: "center", fontSize: "12px", marginTop: "6px" }}>
+        ** กรุณาเรียกหมายเลขคิว **
+      </div>
+    </div>
+  );
+}
+
+function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
+  return (
+    <div
+      className="receipt-section"
+      style={{
+        width: "302px",
+        maxWidth: "302px",
+        margin: "0 auto",
+        background: "#fff",
+        color: "#000",
+        padding: "16px 12px",
+        fontFamily: RECEIPT_FONT,
+        fontSize: "14px",
+        lineHeight: 1.4,
+      }}
+    >
+      <div style={{ textAlign: "center", marginBottom: "8px" }}>
+        {settings.logoDataUrl && (
+          <img
+            src={settings.logoDataUrl}
+            alt="Logo"
+            style={{
+              width: "56px",
+              height: "56px",
+              objectFit: "contain",
+              margin: "0 auto 6px",
+              display: "block",
+            }}
+          />
+        )}
+        <div style={{ fontWeight: 700, fontSize: "18px" }}>{settings.name}</div>
+        <div style={{ fontSize: "12px", marginTop: "2px" }}>ใบเสร็จลูกค้า</div>
+      </div>
+
+      <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "6px 0", margin: "8px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>หมายเลขคิว</span>
+          <span style={{ fontWeight: 800, fontSize: "16px" }}>#{order.queueNumber}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>วันที่</span>
+          <span>{formatDate(order.createdAt)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>ประเภท</span>
+          <span>กลับบ้าน</span>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            fontWeight: 700,
+            borderBottom: "1px dashed #000",
+            paddingBottom: "4px",
+            marginBottom: "6px",
+          }}
+        >
+          <span style={{ flex: 1 }}>รายการ</span>
+          <span style={{ width: "40px", textAlign: "center" }}>จำนวน</span>
+          <span style={{ width: "70px", textAlign: "right" }}>ราคา</span>
+        </div>
+        {order.items.map((item, idx) => (
+          <div key={idx} style={{ marginBottom: "6px" }}>
+            <div style={{ display: "flex", alignItems: "flex-start" }}>
+              <span style={{ flex: 1, paddingRight: "4px", wordBreak: "break-word" }}>
+                {item.name}
+              </span>
+              <span style={{ width: "40px", textAlign: "center" }}>{item.qty}</span>
+              <span style={{ width: "70px", textAlign: "right" }}>
+                {(item.price * item.qty).toLocaleString("th-TH")}
+              </span>
+            </div>
+            {item.note && (
+              <div style={{ fontSize: "12px", paddingLeft: "4px", marginTop: "2px" }}>
+                - {item.note}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "1px dashed #000", paddingTop: "6px", marginBottom: "10px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "18px",
+            fontWeight: 800,
+          }}
+        >
+          <span>ยอดสุทธิ</span>
+          <span>{order.total.toLocaleString("th-TH")} บาท</span>
+        </div>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: "12px" }}>
+        <div style={{ fontSize: "12px", marginBottom: "8px" }}>{settings.footerMessage}</div>
+        <div style={{ fontSize: "16px", fontWeight: 800, letterSpacing: "1px" }}>
+          คิว #{order.queueNumber}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const ReceiptPrintable = forwardRef<HTMLDivElement, ReceiptPrintableProps>(
   ({ order, settings }, ref) => {
     return (
-      <div
-        ref={ref}
-        id="print-container"
-        className="w-[302px] max-w-[302px] mx-auto bg-white text-black p-4 font-mono text-sm leading-tight"
-        style={{ fontFamily: "'Space Mono', monospace", color: "#000" }}
-      >
-        {/* Header */}
-        <div className="text-center mb-4">
-          {settings.logoDataUrl ? (
-            <img
-              src={settings.logoDataUrl}
-              alt="Logo"
-              className="w-16 h-16 object-contain mx-auto mb-2 grayscale"
-            />
-          ) : (
-            <div className="w-16 h-16 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold text-xl">
-              {settings.name.charAt(0)}
-            </div>
-          )}
-          <h1 className="font-bold text-lg">{settings.name}</h1>
-          <p className="text-xs whitespace-pre-wrap">{settings.address}</p>
-          <p className="text-xs">โทร: {settings.phone}</p>
-          {settings.taxId && <p className="text-xs">TAX ID: {settings.taxId}</p>}
-        </div>
-
-        {/* Order Info */}
-        <div className="border-t border-b border-black py-2 mb-4 border-dashed">
-          <div className="flex justify-between">
-            <span>ออเดอร์:</span>
-            <span className="font-bold">{order.orderNumber}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>วันที่:</span>
-            <span>{formatDate(order.createdAt)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>ประเภท:</span>
-            <span>
-              {order.channel === "dine-in"
-                ? "ทานที่ร้าน"
-                : order.channel === "takeaway"
-                ? "กลับบ้าน"
-                : "เดลิเวอรี่"}
-            </span>
-          </div>
-          {order.tableNumber && (
-            <div className="flex justify-between">
-              <span>โต๊ะ:</span>
-              <span className="font-bold">{order.tableNumber}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Items */}
-        <div className="mb-4">
-          <div className="flex font-bold border-b border-black border-dashed pb-1 mb-2">
-            <span className="flex-1">รายการ</span>
-            <span className="w-12 text-right">จำนวน</span>
-            <span className="w-16 text-right">ราคา</span>
-          </div>
-          {order.items.map((item, idx) => (
-            <div key={idx} className="flex mb-1">
-              <span className="flex-1 pr-2 truncate">
-                {item.name}
-                {item.note && (
-                  <span className="block text-xs text-gray-500 truncate">
-                    - {item.note}
-                  </span>
-                )}
-              </span>
-              <span className="w-12 text-right">{item.qty}</span>
-              <span className="w-16 text-right">
-                {(item.price * item.qty).toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Totals */}
-        <div className="border-t border-black border-dashed pt-2 mb-4">
-          <div className="flex justify-between">
-            <span>ยอดรวม:</span>
-            <span>{order.subtotal.toLocaleString()}</span>
-          </div>
-          {order.vat > 0 && (
-            <div className="flex justify-between">
-              <span>VAT ({settings.vatRate}%):</span>
-              <span>{order.vat.toLocaleString()}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-lg font-bold mt-1">
-            <span>ยอดสุทธิ:</span>
-            <span>{order.total.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between mt-2 text-xs">
-            <span>ชำระโดย:</span>
-            <span>
-              {order.paymentMethod === "cash"
-                ? "เงินสด"
-                : order.paymentMethod === "transfer"
-                ? "โอนเงิน"
-                : "บัตรเครดิต"}
-            </span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <p className="text-xs mb-4">{settings.footerMessage}</p>
-          <div className="flex justify-center mb-2">
-            <div className="font-mono text-2xl tracking-[0.2em] font-bold">
-              ||| |||| || |||
-            </div>
-          </div>
-          <p className="text-xs">{order.orderNumber}</p>
-        </div>
+      <div ref={ref} id="print-container">
+        <QueueTicket order={order} settings={settings} />
+        <div className="receipt-cut" />
+        <CustomerReceipt order={order} settings={settings} />
       </div>
     );
   }

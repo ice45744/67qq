@@ -24,24 +24,15 @@ export type CartItem = {
 
 export type Order = {
   id: string;
-  orderNumber: string;
+  queueNumber: number;
   createdAt: string;
   items: CartItem[];
-  subtotal: number;
-  vat: number;
   total: number;
-  paymentMethod: 'cash' | 'transfer' | 'card';
-  channel: 'dine-in' | 'takeaway' | 'delivery';
-  tableNumber?: string;
   status: 'paid' | 'voided';
 };
 
 export type ShopSettings = {
   name: string;
-  address: string;
-  phone: string;
-  taxId: string;
-  vatRate: number;
   footerMessage: string;
   logoDataUrl?: string;
 };

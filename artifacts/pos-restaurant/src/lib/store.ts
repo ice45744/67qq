@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Category, MenuItem, Order, ShopSettings } from './types';
 
-// Default Data Seed
+export type { Category, MenuItem, CartItem, Order, ShopSettings } from './types';
+
 const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-1', name: 'อาหารจานเดียว', sortOrder: 1 },
   { id: 'cat-2', name: 'กับข้าว', sortOrder: 2 },
@@ -20,14 +21,9 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
 
 const DEFAULT_SETTINGS: ShopSettings = {
   name: 'ร้านอร่อยเด็ด',
-  address: '123 ถ.สุขุมวิท กรุงเทพฯ 10110',
-  phone: '02-123-4567',
-  taxId: '1234567890123',
-  vatRate: 7,
-  footerMessage: 'ขอบคุณที่ใช้บริการ โอกาสหน้าเชิญใหม่ค่ะ',
+  footerMessage: 'ขอบคุณที่ใช้บริการ',
 };
 
-// Generic useLocalStorage Hook
 function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
@@ -44,7 +40,6 @@ function useLocalStorage<T>(key: string, initialValue: T) {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      // Dispatch custom event for cross-tab sync if needed, though mostly single client here
       window.dispatchEvent(new Event('local-storage'));
     } catch (error) {
       console.error(error);
@@ -67,25 +62,25 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue] as const;
 }
 
-// Domain Hooks
 export function useCategories() {
   const [categories, setCategories] = useLocalStorage<Category[]>('pos_categories', DEFAULT_CATEGORIES);
-  
   const addCategory = (cat: Category) => setCategories(prev => [...prev, cat].sort((a,b) => a.sortOrder - b.sortOrder));
   const updateCategory = (cat: Category) => setCategories(prev => prev.map(c => c.id === cat.id ? cat : c).sort((a,b) => a.sortOrder - b.sortOrder));
   const deleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
-
   return { categories, addCategory, updateCategory, deleteCategory };
 }
 
 export function useMenu() {
   const [menuItems, setMenuItems] = useLocalStorage<MenuItem[]>('pos_menu_items', DEFAULT_MENU_ITEMS);
-
   const addMenuItem = (item: MenuItem) => setMenuItems(prev => [...prev, item]);
   const updateMenuItem = (item: MenuItem) => setMenuItems(prev => prev.map(m => m.id === item.id ? item : m));
   const deleteMenuItem = (id: string) => setMenuItems(prev => prev.filter(m => m.id !== id));
-
   return { menuItems, addMenuItem, updateMenuItem, deleteMenuItem };
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function useOrders() {
@@ -94,7 +89,14 @@ export function useOrders() {
   const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
   const updateOrder = (order: Order) => setOrders(prev => prev.map(o => o.id === order.id ? order : o));
 
-  return { orders, addOrder, updateOrder };
+  const nextQueueNumber = () => {
+    const today = todayKey();
+    const todays = orders.filter(o => o.createdAt.slice(0, 10) === today);
+    const max = todays.reduce((m, o) => Math.max(m, o.queueNumber || 0), 0);
+    return max + 1;
+  };
+
+  return { orders, addOrder, updateOrder, nextQueueNumber };
 }
 
 export function useSettings() {
@@ -107,7 +109,7 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatDate(isoString: string) {
-  return new Intl.DateTimeFormat('th-TH', { 
+  return new Intl.DateTimeFormat('th-TH', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   }).format(new Date(isoString));

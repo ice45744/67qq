@@ -1,36 +1,24 @@
 import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, X, ShoppingBag, Receipt, Printer } from "lucide-react";
-import { useCategories, useMenu, useOrders, useSettings, CartItem, formatCurrency } from "@/lib/store";
+import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed } from "lucide-react";
+import { useCategories, useMenu, useOrders, useSettings, CartItem, Order, formatCurrency } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptPrintable } from "@/components/ReceiptPrintable";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export default function Home() {
   const { categories } = useCategories();
   const { menuItems } = useMenu();
-  const { addOrder } = useOrders();
+  const { orders, addOrder, nextQueueNumber } = useOrders();
   const { settings } = useSettings();
   const { toast } = useToast();
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [channel, setChannel] = useState<'dine-in' | 'takeaway' | 'delivery'>('dine-in');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'card'>('cash');
-  const [tableNumber, setTableNumber] = useState("");
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
-  const [previewOrder, setPreviewOrder] = useState<any>(null);
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -57,91 +45,66 @@ export default function Home() {
         return newQty > 0 ? { ...i, qty: newQty } : i;
       }
       return i;
-    }));
+    }).filter(i => i.qty > 0));
   };
 
   const removeItem = (id: string) => {
     setCart(prev => prev.filter(i => i.menuItemId !== id));
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const vat = settings.vatRate > 0 ? Math.round((subtotal * settings.vatRate) / 100) : 0;
-  const total = subtotal + vat;
+  const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+  const todaysQueueCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return orders.filter(o => o.createdAt.slice(0, 10) === today).length;
+  }, [orders]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
-    const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
-    const newOrder = {
+    const queueNumber = nextQueueNumber();
+    const newOrder: Order = {
       id: crypto.randomUUID(),
-      orderNumber,
+      queueNumber,
       createdAt: new Date().toISOString(),
       items: [...cart],
-      subtotal,
-      vat,
       total,
-      paymentMethod,
-      channel,
-      tableNumber: channel === 'dine-in' ? tableNumber : undefined,
-      status: 'paid' as const
+      status: 'paid',
     };
 
     addOrder(newOrder);
-    setPreviewOrder(newOrder);
-    
-    // Clear cart immediately for next customer
+    setPrintingOrder(newOrder);
+
     setCart([]);
-    setTableNumber("");
     setIsMobileCartOpen(false);
 
     toast({
-      title: "ชำระเงินสำเร็จ",
-      description: `ออเดอร์ ${orderNumber} ถูกบันทึกแล้ว`,
+      title: `รับออเดอร์เรียบร้อย — คิว #${queueNumber}`,
+      description: `กำลังพิมพ์ใบคิวและใบเสร็จ`,
     });
 
-    // Give state a moment to update DOM, then print
     setTimeout(() => {
       window.print();
-      setPreviewOrder(null);
-    }, 100);
+      setTimeout(() => setPrintingOrder(null), 500);
+    }, 150);
   };
 
   const CartContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <div className="p-4 border-b flex items-center justify-between">
         <h2 className="font-bold text-lg flex items-center gap-2">
           <ShoppingBag className="size-5 text-primary" />
           รายการออเดอร์
         </h2>
-      </div>
-
-      <div className="p-4 border-b bg-muted/10 space-y-4">
-        <div>
-          <Label className="mb-2 block">ช่องทาง</Label>
-          <ToggleGroup type="single" value={channel} onValueChange={(v: any) => v && setChannel(v)} className="justify-start">
-            <ToggleGroupItem value="dine-in" className="flex-1">ทานที่ร้าน</ToggleGroupItem>
-            <ToggleGroupItem value="takeaway" className="flex-1">กลับบ้าน</ToggleGroupItem>
-            <ToggleGroupItem value="delivery" className="flex-1">เดลิเวอรี่</ToggleGroupItem>
-          </ToggleGroup>
+        <div className="text-xs text-muted-foreground">
+          คิวถัดไป <span className="font-bold text-foreground text-base">#{todaysQueueCount + 1}</span>
         </div>
-        
-        {channel === 'dine-in' && (
-          <div className="animate-in fade-in slide-in-from-top-2">
-            <Label className="mb-2 block">หมายเลขโต๊ะ</Label>
-            <Input 
-              placeholder="เช่น T1, A5" 
-              value={tableNumber} 
-              onChange={e => setTableNumber(e.target.value)}
-              className="text-lg"
-            />
-          </div>
-        )}
       </div>
 
       <ScrollArea className="flex-1 p-2">
         <AnimatePresence mode="popLayout">
           {cart.length === 0 ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center"
@@ -189,40 +152,23 @@ export default function Home() {
       </ScrollArea>
 
       <div className="p-4 border-t bg-card mt-auto space-y-4">
-        <div>
-          <Label className="mb-2 block">วิธีชำระเงิน</Label>
-          <ToggleGroup type="single" value={paymentMethod} onValueChange={(v: any) => v && setPaymentMethod(v)} className="justify-start">
-            <ToggleGroupItem value="cash" className="flex-1">เงินสด</ToggleGroupItem>
-            <ToggleGroupItem value="transfer" className="flex-1">โอนเงิน</ToggleGroupItem>
-            <ToggleGroupItem value="card" className="flex-1">บัตร</ToggleGroupItem>
-          </ToggleGroup>
+        <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+          รับออเดอร์ <span className="font-semibold text-foreground">กลับบ้าน</span> · ชำระ <span className="font-semibold text-foreground">เงินสด</span>
         </div>
 
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>ยอดรวม</span>
-            <span>{formatCurrency(subtotal)}</span>
-          </div>
-          {vat > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>VAT {settings.vatRate}%</span>
-              <span>{formatCurrency(vat)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-xl font-bold text-foreground pt-2 border-t border-dashed">
-            <span>ยอดสุทธิ</span>
-            <span className="text-primary">{formatCurrency(total)}</span>
-          </div>
+        <div className="flex justify-between text-2xl font-bold">
+          <span>ยอดสุทธิ</span>
+          <span className="text-primary">{formatCurrency(total)}</span>
         </div>
 
-        <Button 
-          size="lg" 
+        <Button
+          size="lg"
           className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20 active-elevate"
-          disabled={cart.length === 0 || (channel === 'dine-in' && !tableNumber)}
+          disabled={cart.length === 0}
           onClick={handleCheckout}
         >
           <Printer className="mr-2 size-5" />
-          ชำระเงินและพิมพ์ใบเสร็จ
+          รับออเดอร์ + พิมพ์ใบคิว
         </Button>
       </div>
     </div>
@@ -230,10 +176,9 @@ export default function Home() {
 
   return (
     <div className="flex h-full w-full pb-16 md:pb-0">
-      {/* Menu Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
         <div className="p-4 bg-card/80 backdrop-blur-md sticky top-0 z-10 border-b shadow-sm">
-          <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
+          <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex w-max space-x-2 pb-2">
               <Button
                 variant={activeCategory === "all" ? "default" : "secondary"}
@@ -267,9 +212,9 @@ export default function Home() {
               >
                 <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                   {item.imageUrl ? (
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name} 
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
@@ -291,16 +236,14 @@ export default function Home() {
         </ScrollArea>
       </div>
 
-      {/* Desktop Cart Sidebar */}
       <div className="hidden md:block w-80 lg:w-96 border-l bg-card shadow-xl z-20 flex-shrink-0">
         <CartContent />
       </div>
 
-      {/* Mobile Cart Summary Sticky Bar */}
       <div className="md:hidden fixed bottom-16 left-0 right-0 p-3 bg-gradient-to-t from-background via-background to-transparent z-40">
         <Sheet open={isMobileCartOpen} onOpenChange={setIsMobileCartOpen}>
           <SheetTrigger asChild>
-            <Button 
+            <Button
               className="w-full h-14 rounded-2xl shadow-xl shadow-primary/20 flex justify-between px-6 active-elevate"
               size="lg"
             >
@@ -320,9 +263,8 @@ export default function Home() {
         </Sheet>
       </div>
 
-      {/* Hidden Printable Area */}
-      {previewOrder && (
-        <ReceiptPrintable ref={printRef} order={previewOrder} settings={settings} />
+      {printingOrder && (
+        <ReceiptPrintable ref={printRef} order={printingOrder} settings={settings} />
       )}
     </div>
   );

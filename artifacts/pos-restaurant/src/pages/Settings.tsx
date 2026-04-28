@@ -4,7 +4,6 @@ import { useSettings } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
@@ -13,12 +12,9 @@ export default function Settings() {
 
   const [formData, setFormData] = useState(settings);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'vatRate' ? Number(value) : value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +32,7 @@ export default function Settings() {
     setSettings(formData);
     toast({
       title: "บันทึกการตั้งค่าแล้ว",
-      description: "ข้อมูลร้านค้าถูกอัพเดทเรียบร้อย",
+      description: "ข้อมูลร้านค้าถูกอัปเดตเรียบร้อย",
     });
   };
 
@@ -45,12 +41,11 @@ export default function Settings() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">ตั้งค่าร้านค้า</h1>
-          <p className="text-muted-foreground">ข้อมูลบนใบเสร็จและระบบคิดเงิน</p>
+          <p className="text-muted-foreground">ข้อมูลที่จะแสดงบนใบคิวและใบเสร็จ</p>
         </div>
 
         <div className="bg-card rounded-3xl border shadow-sm p-6 space-y-8">
-          
-          {/* Logo Upload */}
+
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="relative group">
               <div className="size-32 rounded-2xl bg-muted border-2 border-dashed flex items-center justify-center overflow-hidden">
@@ -67,10 +62,10 @@ export default function Settings() {
               </label>
             </div>
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="font-bold">โลโก้ร้าน (พิมพ์ใบเสร็จ)</h3>
-              <p className="text-sm text-muted-foreground">แนะนำเป็นรูปขาวดำ อัตราส่วน 1:1</p>
+              <h3 className="font-bold">โลโก้ร้าน</h3>
+              <p className="text-sm text-muted-foreground">จะปรากฏบนใบเสร็จลูกค้า แนะนำเป็นรูปขาวดำ อัตราส่วน 1:1</p>
               {formData.logoDataUrl && (
-                <Button variant="link" size="sm" className="text-destructive h-auto p-0 mt-2" 
+                <Button variant="link" size="sm" className="text-destructive h-auto p-0 mt-2"
                   onClick={() => setFormData(p => ({ ...p, logoDataUrl: undefined }))}>
                   ลบรูปโลโก้
                 </Button>
@@ -79,37 +74,15 @@ export default function Settings() {
           </div>
 
           <div className="grid gap-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>ชื่อร้าน</Label>
-                <Input name="name" value={formData.name} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label>เบอร์โทรศัพท์</Label>
-                <Input name="phone" value={formData.phone} onChange={handleChange} />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>ที่อยู่</Label>
-              <Textarea name="address" value={formData.address} onChange={handleChange} className="resize-none" rows={3} />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>เลขประจำตัวผู้เสียภาษี</Label>
-                <Input name="taxId" value={formData.taxId} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label>อัตราภาษีมูลค่าเพิ่ม (VAT %)</Label>
-                <Input type="number" name="vatRate" value={formData.vatRate} onChange={handleChange} />
-                <p className="text-xs text-muted-foreground">ใส่ 0 หากไม่มีการคิด VAT</p>
-              </div>
+              <Label>ชื่อร้าน</Label>
+              <Input name="name" value={formData.name} onChange={handleChange} />
             </div>
 
             <div className="space-y-2">
               <Label>ข้อความท้ายใบเสร็จ</Label>
               <Input name="footerMessage" value={formData.footerMessage} onChange={handleChange} />
+              <p className="text-xs text-muted-foreground">เช่น "ขอบคุณที่ใช้บริการ"</p>
             </div>
           </div>
 
