@@ -13,51 +13,51 @@ function QueueTicket({ order, settings }: ReceiptPrintableProps) {
     <div
       className="receipt-section"
       style={{
-        width: "302px",
-        maxWidth: "302px",
+        width: "219px",
+        maxWidth: "219px",
         margin: "0 auto",
         background: "#fff",
         color: "#000",
-        padding: "16px 12px",
+        padding: "10px 6px",
         fontFamily: RECEIPT_FONT,
-        fontSize: "14px",
-        lineHeight: 1.35,
+        fontSize: "12px",
+        lineHeight: 1.3,
       }}
     >
-      <div style={{ textAlign: "center", marginBottom: "8px" }}>
-        <div style={{ fontWeight: 700, fontSize: "16px" }}>{settings.name}</div>
-        <div style={{ fontSize: "12px", marginTop: "2px" }}>** ใบคิว / สำหรับครัว **</div>
+      <div style={{ textAlign: "center", marginBottom: "6px" }}>
+        <div style={{ fontWeight: 700, fontSize: "14px" }}>{settings.name}</div>
+        <div style={{ fontSize: "11px", marginTop: "2px" }}>** ใบคิว / สำหรับครัว **</div>
       </div>
 
       <div
         style={{
           textAlign: "center",
           border: "2px solid #000",
-          padding: "12px 8px",
-          margin: "8px 0",
+          padding: "8px 4px",
+          margin: "6px 0",
         }}
       >
-        <div style={{ fontSize: "13px", fontWeight: 600 }}>หมายเลขคิว</div>
+        <div style={{ fontSize: "11px", fontWeight: 600 }}>หมายเลขคิว</div>
         <div
           style={{
-            fontSize: "72px",
+            fontSize: "56px",
             fontWeight: 800,
             lineHeight: 1,
-            margin: "4px 0",
-            letterSpacing: "2px",
+            margin: "2px 0",
+            letterSpacing: "1px",
           }}
         >
           {order.queueNumber}
         </div>
       </div>
 
-      <div style={{ fontSize: "12px", textAlign: "center", marginBottom: "8px" }}>
+      <div style={{ fontSize: "11px", textAlign: "center", marginBottom: "6px" }}>
         {formatDate(order.createdAt)}
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "8px 0" }} />
+      <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
 
-      <div style={{ fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>รายการอาหาร</div>
+      <div style={{ fontWeight: 700, fontSize: "12px", marginBottom: "4px" }}>รายการอาหาร</div>
       {order.items.map((item, idx) => (
         <div
           key={idx}
@@ -66,14 +66,14 @@ function QueueTicket({ order, settings }: ReceiptPrintableProps) {
             justifyContent: "space-between",
             alignItems: "flex-start",
             marginBottom: "4px",
-            fontSize: "15px",
+            fontSize: "13px",
             fontWeight: 600,
           }}
         >
-          <span style={{ flex: 1, paddingRight: "8px", wordBreak: "break-word" }}>
+          <span style={{ flex: 1, paddingRight: "4px", wordBreak: "break-word" }}>
             {item.name}
             {item.note && (
-              <div style={{ fontSize: "12px", fontWeight: 400, marginTop: "2px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 400, marginTop: "2px" }}>
                 หมายเหตุ: {item.note}
               </div>
             )}
@@ -82,9 +82,9 @@ function QueueTicket({ order, settings }: ReceiptPrintableProps) {
         </div>
       ))}
 
-      <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }} />
+      <div style={{ borderTop: "1px dashed #000", margin: "8px 0" }} />
 
-      <div style={{ textAlign: "center", fontSize: "12px", marginTop: "6px" }}>
+      <div style={{ textAlign: "center", fontSize: "11px", marginTop: "4px" }}>
         ** กรุณาเรียกหมายเลขคิว **
       </div>
     </div>
@@ -96,39 +96,39 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
     <div
       className="receipt-section"
       style={{
-        width: "302px",
-        maxWidth: "302px",
+        width: "219px",
+        maxWidth: "219px",
         margin: "0 auto",
         background: "#fff",
         color: "#000",
-        padding: "16px 12px",
+        padding: "10px 6px",
         fontFamily: RECEIPT_FONT,
-        fontSize: "14px",
-        lineHeight: 1.4,
+        fontSize: "12px",
+        lineHeight: 1.35,
       }}
     >
-      <div style={{ textAlign: "center", marginBottom: "8px" }}>
+      <div style={{ textAlign: "center", marginBottom: "6px" }}>
         {settings.logoDataUrl && (
           <img
             src={settings.logoDataUrl}
             alt="Logo"
             style={{
-              width: "56px",
-              height: "56px",
+              width: "44px",
+              height: "44px",
               objectFit: "contain",
-              margin: "0 auto 6px",
+              margin: "0 auto 4px",
               display: "block",
             }}
           />
         )}
-        <div style={{ fontWeight: 700, fontSize: "18px" }}>{settings.name}</div>
-        <div style={{ fontSize: "12px", marginTop: "2px" }}>ใบเสร็จลูกค้า</div>
+        <div style={{ fontWeight: 700, fontSize: "15px" }}>{settings.name}</div>
+        <div style={{ fontSize: "11px", marginTop: "2px" }}>ใบเสร็จลูกค้า</div>
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "6px 0", margin: "8px 0" }}>
+      <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "4px 0", margin: "6px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>หมายเลขคิว</span>
-          <span style={{ fontWeight: 800, fontSize: "16px" }}>#{order.queueNumber}</span>
+          <span>คิว</span>
+          <span style={{ fontWeight: 800, fontSize: "14px" }}>#{order.queueNumber}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>วันที่</span>
@@ -140,33 +140,34 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
         </div>
       </div>
 
-      <div style={{ marginBottom: "8px" }}>
+      <div style={{ marginBottom: "6px" }}>
         <div
           style={{
             display: "flex",
             fontWeight: 700,
             borderBottom: "1px dashed #000",
-            paddingBottom: "4px",
-            marginBottom: "6px",
+            paddingBottom: "3px",
+            marginBottom: "4px",
+            fontSize: "11px",
           }}
         >
           <span style={{ flex: 1 }}>รายการ</span>
-          <span style={{ width: "40px", textAlign: "center" }}>จำนวน</span>
-          <span style={{ width: "70px", textAlign: "right" }}>ราคา</span>
+          <span style={{ width: "26px", textAlign: "center" }}>x</span>
+          <span style={{ width: "50px", textAlign: "right" }}>ราคา</span>
         </div>
         {order.items.map((item, idx) => (
-          <div key={idx} style={{ marginBottom: "6px" }}>
+          <div key={idx} style={{ marginBottom: "4px" }}>
             <div style={{ display: "flex", alignItems: "flex-start" }}>
-              <span style={{ flex: 1, paddingRight: "4px", wordBreak: "break-word" }}>
+              <span style={{ flex: 1, paddingRight: "2px", wordBreak: "break-word" }}>
                 {item.name}
               </span>
-              <span style={{ width: "40px", textAlign: "center" }}>{item.qty}</span>
-              <span style={{ width: "70px", textAlign: "right" }}>
+              <span style={{ width: "26px", textAlign: "center" }}>{item.qty}</span>
+              <span style={{ width: "50px", textAlign: "right" }}>
                 {(item.price * item.qty).toLocaleString("th-TH")}
               </span>
             </div>
             {item.note && (
-              <div style={{ fontSize: "12px", paddingLeft: "4px", marginTop: "2px" }}>
+              <div style={{ fontSize: "11px", paddingLeft: "2px", marginTop: "1px" }}>
                 - {item.note}
               </div>
             )}
@@ -174,12 +175,12 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
         ))}
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", paddingTop: "6px", marginBottom: "10px" }}>
+      <div style={{ borderTop: "1px dashed #000", paddingTop: "4px", marginBottom: "8px" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "18px",
+            fontSize: "15px",
             fontWeight: 800,
           }}
         >
@@ -188,9 +189,9 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
         </div>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: "12px" }}>
-        <div style={{ fontSize: "12px", marginBottom: "8px" }}>{settings.footerMessage}</div>
-        <div style={{ fontSize: "16px", fontWeight: 800, letterSpacing: "1px" }}>
+      <div style={{ textAlign: "center", marginTop: "8px" }}>
+        <div style={{ fontSize: "11px", marginBottom: "6px" }}>{settings.footerMessage}</div>
+        <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: "1px" }}>
           คิว #{order.queueNumber}
         </div>
       </div>
