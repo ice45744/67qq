@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed } from "lucide-react";
 import { useCategories, useMenu, useOrders, useSettings, CartItem, Order, formatCurrency } from "@/lib/store";
@@ -202,6 +203,27 @@ export default function Home() {
         </div>
 
         <ScrollArea className="flex-1 p-4 lg:p-6">
+          {menuItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <UtensilsCrossed className="size-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">ยังไม่มีเมนูในร้าน</h3>
+              <p className="text-muted-foreground mb-6 max-w-xs">
+                เริ่มต้นด้วยการเพิ่มหมวดหมู่และเมนูอาหารของคุณเอง
+              </p>
+              <Link href="/menu">
+                <Button size="lg" className="font-bold active-elevate shadow-md">
+                  <Plus className="mr-2 size-5" /> ไปจัดการเมนู
+                </Button>
+              </Link>
+            </div>
+          ) : filteredMenu.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
+              <UtensilsCrossed className="size-10 opacity-30 mb-3" />
+              <p>ไม่มีเมนูในหมวดนี้</p>
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4 pb-20">
             {filteredMenu.map(item => (
               <motion.div
