@@ -1,0 +1,38 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "CqIpuq38IquLRztUyyyZF"
+uri = "file://artifacts/pos-restaurant/public/pad-thai.png"
+type = "image"
+title = "pad thai with shrimp"
+
+[[generated]]
+id = "wk7sfZcRgOkSw-N-tGESP"
+uri = "file://artifacts/pos-restaurant/public/kra-pao.png"
+type = "image"
+title = "kra pao moo krob"
+
+[[generated]]
+id = "m5ku6VUR4SWfVG7fd-peJ"
+uri = "file://artifacts/pos-restaurant/public/tom-yum.png"
+type = "image"
+title = "tom yum goong"
+
+[[generated]]
+id = "qc0C7lZUSarhQqDC5WCJx"
+uri = "file://artifacts/pos-restaurant/public/som-tum.png"
+type = "image"
+title = "som tum thai"
+
+[[generated]]
+id = "WtyRpoSI8o8bNqkPryjFp"
+uri = "file://artifacts/pos-restaurant/public/thai-tea.png"
+type = "image"
+title = "iced thai tea"
+
+[[generated]]
+id = "MLN9Tk5aFc0-lTsjgG0a9"
+uri = "file://artifacts/pos-restaurant/public/mango-sticky-rice.png"
+type = "image"
+title = "mango sticky rice"
