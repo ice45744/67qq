@@ -16,6 +16,12 @@ router.post("/orders", async (req, res) => {
     .values({ id, queueNumber, items, total, status: status ?? "pending", tableNote })
     .returning();
   broadcast("orders:new", row);
+  // Notify queue counter watchers
+  const today2 = new Date(); today2.setHours(0, 0, 0, 0);
+  const allToday = await db.select().from(ordersTable)
+    .where(sql`${ordersTable.createdAt} >= ${today2.toISOString()}`);
+  const newMax = allToday.reduce((m, o) => Math.max(m, o.queueNumber), 0);
+  broadcast("queue:update", { maxQueue: newMax });
   res.json(row);
 });
 

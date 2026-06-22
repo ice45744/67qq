@@ -130,6 +130,23 @@ export function useOrders() {
   return { orders, loading, addOrder, updateOrder, updateOrderStatus, nextQueueNumber };
 }
 
+export function useNextQueue() {
+  const [maxQueue, setMaxQueue] = useState(0);
+
+  useEffect(() => {
+    api.orders.todayCount().then(({ maxQueue }) => setMaxQueue(maxQueue));
+  }, []);
+
+  useSSE<{ maxQueue: number }>("queue:update", ({ maxQueue }) => setMaxQueue(maxQueue));
+
+  const nextQueueNumber = useCallback(async (): Promise<number> => {
+    const { maxQueue } = await api.orders.todayCount();
+    return maxQueue + 1;
+  }, []);
+
+  return { nextQueue: maxQueue + 1, nextQueueNumber };
+}
+
 export function useSettings() {
   const [settings, setSettings] = useState<ShopSettings>({
     name: "ร้านของฉัน",
