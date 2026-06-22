@@ -27,6 +27,7 @@ export default function Orders() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [tab, setTab] = useState<"active" | "all">("active");
+  const [receiptInfo, setReceiptInfo] = useState<{ order: Order; cashReceived?: number; change?: number } | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const activeOrders = useMemo(() =>
@@ -48,6 +49,16 @@ export default function Orders() {
   const handleOpenBill = (order: Order) => {
     setSelectedOrder(order);
     setIsBillOpen(true);
+  };
+
+  const handlePaid = (order: Order, cashReceived?: number, change?: number) => {
+    // Dialog is already closed by BillCloseDialog before calling this
+    // Now trigger print from page level (no dialog overlay interference)
+    setReceiptInfo({ order, cashReceived, change });
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setReceiptInfo(null), 600);
+    }, 200);
   };
 
   const statusCounts = useMemo(() => ({
@@ -270,6 +281,7 @@ export default function Orders() {
         order={selectedOrder}
         open={isBillOpen}
         onOpenChange={(v) => { setIsBillOpen(v); if (!v) setSelectedOrder(null); }}
+        onPaid={handlePaid}
       />
 
       {/* Receipt preview dialog */}
@@ -290,8 +302,20 @@ export default function Orders() {
         </DialogContent>
       </Dialog>
 
-      {selectedOrder && !isPreviewOpen && !isBillOpen && (
+      {/* Receipt for re-print from preview */}
+      {selectedOrder && !isPreviewOpen && !isBillOpen && !receiptInfo && (
         <ReceiptPrintable ref={printRef} order={selectedOrder} settings={settings} />
+      )}
+
+      {/* Receipt after bill close — printed after dialog closes */}
+      {receiptInfo && (
+        <ReceiptPrintable
+          ref={printRef}
+          order={receiptInfo.order}
+          settings={settings}
+          cashReceived={receiptInfo.cashReceived}
+          change={receiptInfo.change}
+        />
       )}
     </div>
   );
