@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api, Category, MenuItem, Order, ShopSettings, CartItem } from "./api";
+import { subscribe } from "./sse-client";
 
 export type { Category, MenuItem, CartItem, Order, ShopSettings } from "./api";
 
@@ -14,25 +15,11 @@ export function formatDate(isoString: string) {
   }).format(new Date(isoString));
 }
 
-function useSSE<T>(
-  eventName: string,
-  onEvent: (data: T) => void
-) {
+function useSSE<T>(eventName: string, onEvent: (data: T) => void) {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
-
   useEffect(() => {
-    const es = new EventSource("/api/events");
-    const handler = (e: MessageEvent) => {
-      try {
-        onEventRef.current(JSON.parse(e.data));
-      } catch (_) {}
-    };
-    es.addEventListener(eventName, handler);
-    return () => {
-      es.removeEventListener(eventName, handler);
-      es.close();
-    };
+    return subscribe(eventName, (data) => onEventRef.current(data as T));
   }, [eventName]);
 }
 
