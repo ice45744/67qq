@@ -41,12 +41,13 @@ const CartContent = memo(function CartContent({
       </div>
 
       <ScrollArea className="flex-1 p-2">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {cart.length === 0 ? (
             <motion.div
               key="empty"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center"
             >
               <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -60,10 +61,10 @@ const CartContent = memo(function CartContent({
               {cart.map(item => (
                 <motion.div
                   key={item.menuItemId}
-                  layout
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.15 }}
                   className="bg-card border rounded-xl p-3 shadow-sm"
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -322,7 +323,7 @@ export default function Home() {
               <span className="font-bold text-lg">{formatCurrency(total)}</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[90dvh] p-0 flex flex-col rounded-t-3xl sm:max-w-none">
+          <SheetContent side="bottom" className="h-[90svh] p-0 flex flex-col rounded-t-3xl sm:max-w-none">
             <SheetTitle className="sr-only">ตะกร้าสินค้า</SheetTitle>
             <CartContent
               cart={cart}
