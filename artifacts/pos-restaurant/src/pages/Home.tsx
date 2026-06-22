@@ -114,15 +114,15 @@ const CartContent = memo(function CartContent({
           <span>ยอดสุทธิ</span>
           <span className="text-primary">{formatCurrency(total)}</span>
         </div>
-        <Button
-          size="lg"
-          className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20 active-elevate"
+        <button
+          style={{ touchAction: "manipulation" }}
           disabled={cart.length === 0}
           onClick={onCheckout}
+          className="w-full h-[72px] rounded-2xl text-xl font-black bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-100 disabled:opacity-40 disabled:pointer-events-none"
         >
-          <ChefHat className="mr-2 size-5" />
+          <ChefHat className="size-6" />
           ส่งออเดอร์ไปครัว
-        </Button>
+        </button>
       </div>
     </div>
   );
