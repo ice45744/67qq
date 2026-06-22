@@ -80,24 +80,31 @@ export default function MenuAdmin() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 600;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-      setImageUrl(canvas.toDataURL("image/jpeg", 0.75));
-      URL.revokeObjectURL(objectUrl);
-    };
-    img.src = objectUrl;
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64 }),
+      });
+      if (!res.ok) throw new Error("upload failed");
+      const { url } = await res.json();
+      setImageUrl(url);
+    } catch {
+      toast({ variant: "destructive", title: "อัปโหลดรูปไม่สำเร็จ" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const openNewCat = () => {
@@ -282,9 +289,14 @@ export default function MenuAdmin() {
           <div className="space-y-4 py-4">
 
             <div className="flex justify-center mb-4">
-              <label className="relative cursor-pointer group">
+              <label className={`relative cursor-pointer group ${uploading ? "pointer-events-none" : ""}`}>
                 <div className="size-32 rounded-2xl bg-muted border-2 border-dashed flex flex-col items-center justify-center overflow-hidden hover:bg-muted/80 transition-colors">
-                  {imageUrl ? (
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs text-muted-foreground">กำลังอัปโหลด...</span>
+                    </div>
+                  ) : imageUrl ? (
                     <img src={imageUrl} alt="preview" className="w-full h-full object-cover" />
                   ) : (
                     <>
@@ -293,7 +305,7 @@ export default function MenuAdmin() {
                     </>
                   )}
                 </div>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
               </label>
             </div>
 

@@ -5,10 +5,12 @@ import menuRouter from "./menu.js";
 import ordersRouter from "./orders.js";
 import settingsRouter from "./settings.js";
 import eventsRouter from "./events.js";
+import uploadRouter from "./upload.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(uploadRouter);
 router.use(categoriesRouter);
 router.use(menuRouter);
 router.use(ordersRouter);
