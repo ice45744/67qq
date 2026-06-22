@@ -61,9 +61,21 @@ function playAlertTone() {
   });
 }
 
-// Pick the best Thai voice available, or fall back to default
-function getThaiVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
+// ── TTS helpers ─────────────────────────────────────────────────────────────
+
+// Voices load asynchronously — wait for them before picking Thai voice
+function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise(resolve => {
+    const v = window.speechSynthesis.getVoices();
+    if (v.length > 0) { resolve(v); return; }
+    const handler = () => resolve(window.speechSynthesis.getVoices());
+    window.speechSynthesis.addEventListener("voiceschanged", handler, { once: true });
+    // Timeout fallback — resolve with whatever is available after 1 s
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+  });
+}
+
+function pickThaiVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   return (
     voices.find(v => v.lang === "th-TH") ||
     voices.find(v => v.lang.startsWith("th")) ||
@@ -74,13 +86,15 @@ function getThaiVoice(): SpeechSynthesisVoice | null {
 // Unlock TTS on iOS — must be called inside a user-gesture handler
 function unlockTTS() {
   if (!("speechSynthesis" in window)) return;
-  const u = new SpeechSynthesisUtterance("");
+  const u = new SpeechSynthesisUtterance(" ");
   u.volume = 0;
   window.speechSynthesis.speak(u);
+  // Trigger voice list load now so it's ready when first order arrives
+  loadVoices();
 }
 
-// Announce new orders by queue number
-function speakOrder(orders: Order[]) {
+// Announce new orders by queue number — fully async so Thai voice is found
+async function speakOrder(orders: Order[]) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
 
@@ -90,27 +104,32 @@ function speakOrder(orders: Order[]) {
       ? `ออเดอร์ใหม่ คิวที่ ${nums[0]}`
       : `ออเดอร์ใหม่ คิวที่ ${nums.slice(0, -1).join(" และคิวที่ ")} และคิวที่ ${nums[nums.length - 1]}`;
 
+  const voices = await loadVoices();
+  const thaiVoice = pickThaiVoice(voices);
+
   const u = new SpeechSynthesisUtterance(text);
-  const thaiVoice = getThaiVoice();
   if (thaiVoice) u.voice = thaiVoice;
   u.lang = "th-TH";
-  u.rate = 0.95;
+  u.rate = 0.9;
   u.pitch = 1.1;
   u.volume = 1;
 
-  // Delay slightly so alert tone plays first
-  setTimeout(() => window.speechSynthesis.speak(u), 250);
+  // Short delay so alert tone plays first
+  setTimeout(() => window.speechSynthesis.speak(u), 300);
 }
 
-// Test announcement used when enabling sound
-function speakTest() {
+// Test announcement — also async
+async function speakTest() {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
+
+  const voices = await loadVoices();
+  const thaiVoice = pickThaiVoice(voices);
+
   const u = new SpeechSynthesisUtterance("เปิดเสียงแจ้งเตือนแล้ว");
-  const thaiVoice = getThaiVoice();
   if (thaiVoice) u.voice = thaiVoice;
   u.lang = "th-TH";
-  u.rate = 0.95;
+  u.rate = 0.9;
   u.volume = 1;
   window.speechSynthesis.speak(u);
 }
