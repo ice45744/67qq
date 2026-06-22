@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, ordersTable } from "@workspace/db";
+import { db, ordersTable, settingsTable } from "@workspace/db";
 import { broadcast } from "../lib/sse.js";
 
 const router = Router();
@@ -42,12 +42,25 @@ router.put("/orders/:id", async (req, res) => {
 });
 
 router.get("/orders/today-count", async (_req, res) => {
+  // Use queueResetAt if set, otherwise start of today
+  const resetRow = await db.select().from(settingsTable).where(eq(settingsTable.key, "queueResetAt"));
+  const resetAt = resetRow[0]?.value ?? null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const since = resetAt && new Date(resetAt) > today ? resetAt : today.toISOString();
   const rows = await db.select().from(ordersTable)
-    .where(sql`${ordersTable.createdAt} >= ${today.toISOString()}`);
+    .where(sql`${ordersTable.createdAt} >= ${since}`);
   const maxQueue = rows.reduce((m, o) => Math.max(m, o.queueNumber), 0);
   res.json({ count: rows.length, maxQueue });
+});
+
+router.post("/orders/reset-queue", async (_req, res) => {
+  const now = new Date().toISOString();
+  await db.insert(settingsTable)
+    .values({ key: "queueResetAt", value: now })
+    .onConflictDoUpdate({ target: settingsTable.key, set: { value: now } });
+  broadcast("queue:update", { maxQueue: 0 });
+  res.json({ ok: true, resetAt: now });
 });
 
 export default router;

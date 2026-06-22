@@ -69,6 +69,7 @@ export const api = {
     create: (data: Omit<Order, "createdAt"> & { createdAt?: string }) => req<Order>("/orders", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Order>) => req<Order>(`/orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     todayCount: () => req<{ count: number; maxQueue: number }>("/orders/today-count"),
+    resetQueue: () => req<{ ok: boolean; resetAt: string }>("/orders/reset-queue", { method: "POST" }),
   },
   settings: {
     get: () => req<ShopSettings>("/settings"),

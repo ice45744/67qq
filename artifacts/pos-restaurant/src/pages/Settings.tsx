@@ -1,16 +1,29 @@
 import { useState } from "react";
-import { Store, Save, Upload } from "lucide-react";
+import { Store, Save, Upload, RotateCcw } from "lucide-react";
 import { useSettings } from "@/lib/store";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Settings() {
   const { settings, setSettings } = useSettings();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState(settings);
+  const [resetting, setResetting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,6 +49,21 @@ export default function Settings() {
     });
   };
 
+  const handleResetQueue = async () => {
+    setResetting(true);
+    try {
+      await api.orders.resetQueue();
+      toast({
+        title: "รีเซ็ตคิวแล้ว",
+        description: "เลขคิวจะเริ่มนับจาก #1 ใหม่",
+      });
+    } catch {
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถรีเซ็ตคิวได้", variant: "destructive" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="flex-1 p-4 lg:p-8 overflow-y-auto bg-muted/10 pb-20 md:pb-8">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -44,8 +72,8 @@ export default function Settings() {
           <p className="text-muted-foreground">ข้อมูลที่จะแสดงบนใบคิวและใบเสร็จ</p>
         </div>
 
+        {/* Shop info */}
         <div className="bg-card rounded-3xl border shadow-sm p-6 space-y-8">
-
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="relative group">
               <div className="size-32 rounded-2xl bg-muted border-2 border-dashed flex items-center justify-center overflow-hidden">
@@ -92,6 +120,49 @@ export default function Settings() {
             </Button>
           </div>
         </div>
+
+        {/* Queue management */}
+        <div className="bg-card rounded-3xl border shadow-sm p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-base">รีเซ็ตเลขคิว</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                เลขคิวจะเริ่มต้นนับจาก #1 ใหม่ทันที ใช้เมื่อเริ่มรอบใหม่หรือวันใหม่
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive gap-2"
+                  disabled={resetting}
+                >
+                  <RotateCcw className="size-4" />
+                  {resetting ? "กำลังรีเซ็ต..." : "รีเซ็ตคิว"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>รีเซ็ตเลขคิว?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    ออเดอร์ใหม่ที่สร้างหลังจากนี้จะเริ่มนับจาก #1 ใหม่
+                    ออเดอร์เก่าจะยังคงอยู่ในระบบ ไม่มีการลบข้อมูล
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleResetQueue}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    รีเซ็ตคิว
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+
       </div>
     </div>
   );
