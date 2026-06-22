@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed } from "lucide-react";
+import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed, CheckCircle2, ChefHat } from "lucide-react";
 import { useCategories, useMenu, useOrders, useSettings, CartItem, Order, formatCurrency } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ReceiptPrintable } from "@/components/ReceiptPrintable";
 
 export default function Home() {
@@ -14,11 +14,13 @@ export default function Home() {
   const { menuItems } = useMenu();
   const { orders, addOrder, nextQueueNumber } = useOrders();
   const { settings } = useSettings();
-  const { toast } = useToast();
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  // After-order confirmation dialog
+  const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,6 @@ export default function Home() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-
     const queueNumber = nextQueueNumber();
     const newOrder: Order = {
       id: crypto.randomUUID(),
@@ -70,24 +71,26 @@ export default function Home() {
       createdAt: new Date().toISOString(),
       items: [...cart],
       total,
-      status: 'pending',
+      status: "pending",
     };
-
     addOrder(newOrder);
-    setPrintingOrder(newOrder);
-
     setCart([]);
     setIsMobileCartOpen(false);
+    // Show confirmation dialog instead of auto-printing
+    setConfirmedOrder(newOrder);
+  };
 
-    toast({
-      title: `ส่งออเดอร์คิว #${queueNumber} ไปห้องครัวแล้ว!`,
-      description: `ห้องครัวจะเห็นออเดอร์นี้ทันที`,
-    });
-
+  const handlePrint = () => {
+    if (!confirmedOrder) return;
+    setPrintingOrder(confirmedOrder);
     setTimeout(() => {
       window.print();
-      setTimeout(() => setPrintingOrder(null), 500);
+      setTimeout(() => setPrintingOrder(null), 600);
     }, 150);
+  };
+
+  const handleCloseConfirm = () => {
+    setConfirmedOrder(null);
   };
 
   const CartContent = () => (
@@ -156,19 +159,17 @@ export default function Home() {
         <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
           รับออเดอร์ <span className="font-semibold text-foreground">กลับบ้าน</span> · ชำระ <span className="font-semibold text-foreground">เงินสด</span>
         </div>
-
         <div className="flex justify-between text-2xl font-bold">
           <span>ยอดสุทธิ</span>
           <span className="text-primary">{formatCurrency(total)}</span>
         </div>
-
         <Button
           size="lg"
           className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20 active-elevate"
           disabled={cart.length === 0}
           onClick={handleCheckout}
         >
-          <Printer className="mr-2 size-5" />
+          <ChefHat className="mr-2 size-5" />
           ส่งออเดอร์ไปครัว
         </Button>
       </div>
@@ -188,7 +189,7 @@ export default function Home() {
               >
                 ทั้งหมด
               </Button>
-              {categories.sort((a,b) => a.sortOrder - b.sortOrder).map(cat => (
+              {categories.sort((a, b) => a.sortOrder - b.sortOrder).map(cat => (
                 <Button
                   key={cat.id}
                   variant={activeCategory === cat.id ? "default" : "secondary"}
@@ -258,11 +259,13 @@ export default function Home() {
         </ScrollArea>
       </div>
 
+      {/* Desktop cart */}
       <div className="hidden md:block w-80 lg:w-96 border-l bg-card shadow-xl z-20 flex-shrink-0">
         <CartContent />
       </div>
 
-      <div className="md:hidden fixed bottom-16 left-0 right-0 p-3 bg-gradient-to-t from-background via-background to-transparent z-40">
+      {/* Mobile floating cart button */}
+      <div className="md:hidden fixed bottom-[72px] left-0 right-0 p-3 bg-gradient-to-t from-background via-background to-transparent z-40">
         <Sheet open={isMobileCartOpen} onOpenChange={setIsMobileCartOpen}>
           <SheetTrigger asChild>
             <Button
@@ -271,7 +274,7 @@ export default function Home() {
             >
               <div className="flex items-center gap-3">
                 <div className="bg-primary-foreground/20 rounded-full size-8 flex items-center justify-center">
-                  <span className="font-bold">{cart.reduce((s,i) => s+i.qty, 0)}</span>
+                  <span className="font-bold">{cart.reduce((s, i) => s + i.qty, 0)}</span>
                 </div>
                 <span className="font-medium">ดูออเดอร์</span>
               </div>
@@ -285,6 +288,55 @@ export default function Home() {
         </Sheet>
       </div>
 
+      {/* ✅ Order confirmed dialog — replaces auto-print */}
+      <Dialog open={!!confirmedOrder} onOpenChange={(v) => { if (!v) handleCloseConfirm(); }}>
+        <DialogContent className="max-w-sm w-[92vw] p-0 rounded-2xl overflow-hidden">
+          <div className="bg-green-50 px-6 pt-6 pb-4 text-center">
+            <div className="size-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="size-9 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-green-800">ส่งออเดอร์แล้ว!</h2>
+            <p className="text-green-700 text-sm mt-1">
+              คิว <span className="font-black text-3xl text-green-600">#{confirmedOrder?.queueNumber}</span>
+            </p>
+            <p className="text-green-600 text-xs mt-2">ห้องครัวจะเห็นออเดอร์นี้ทันที</p>
+          </div>
+
+          {confirmedOrder && (
+            <div className="px-5 py-3 space-y-1.5 border-b">
+              {confirmedOrder.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{item.name} <span className="font-semibold text-foreground">x{item.qty}</span></span>
+                  <span className="font-medium">{formatCurrency(item.price * item.qty)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between font-bold text-base pt-1 border-t mt-2">
+                <span>ยอดรวม</span>
+                <span className="text-primary">{formatCurrency(confirmedOrder.total)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 px-5 py-4">
+            <Button
+              variant="outline"
+              className="flex-1 h-11"
+              onClick={handleCloseConfirm}
+            >
+              ปิด
+            </Button>
+            <Button
+              className="flex-1 h-11 gap-2"
+              onClick={handlePrint}
+            >
+              <Printer className="size-4" />
+              พิมพ์ใบเสร็จ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden receipt for printing */}
       {printingOrder && (
         <ReceiptPrintable ref={printRef} order={printingOrder} settings={settings} />
       )}
