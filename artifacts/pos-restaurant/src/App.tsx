@@ -8,18 +8,24 @@ import Home from "@/pages/Home";
 import Orders from "@/pages/Orders";
 import MenuAdmin from "@/pages/Menu";
 import Settings from "@/pages/Settings";
+import Kitchen from "@/pages/Kitchen";
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/orders" component={Orders} />
-        <Route path="/menu" component={MenuAdmin} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/kitchen" component={Kitchen} />
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/orders" component={Orders} />
+            <Route path="/menu" component={MenuAdmin} />
+            <Route path="/settings" component={Settings} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 

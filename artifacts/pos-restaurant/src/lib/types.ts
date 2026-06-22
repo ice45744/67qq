@@ -22,13 +22,16 @@ export type CartItem = {
   note?: string;
 };
 
+export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'paid' | 'voided';
+
 export type Order = {
   id: string;
   queueNumber: number;
   createdAt: string;
   items: CartItem[];
   total: number;
-  status: 'paid' | 'voided';
+  status: OrderStatus;
+  tableNote?: string;
 };
 
 export type ShopSettings = {

@@ -70,7 +70,7 @@ export default function Home() {
       createdAt: new Date().toISOString(),
       items: [...cart],
       total,
-      status: 'paid',
+      status: 'pending',
     };
 
     addOrder(newOrder);
@@ -80,8 +80,8 @@ export default function Home() {
     setIsMobileCartOpen(false);
 
     toast({
-      title: `รับออเดอร์เรียบร้อย — คิว #${queueNumber}`,
-      description: `กำลังพิมพ์ใบคิวและใบเสร็จ`,
+      title: `ส่งออเดอร์คิว #${queueNumber} ไปห้องครัวแล้ว!`,
+      description: `ห้องครัวจะเห็นออเดอร์นี้ทันที`,
     });
 
     setTimeout(() => {
@@ -169,7 +169,7 @@ export default function Home() {
           onClick={handleCheckout}
         >
           <Printer className="mr-2 size-5" />
-          รับออเดอร์ + พิมพ์ใบคิว
+          ส่งออเดอร์ไปครัว
         </Button>
       </div>
     </div>

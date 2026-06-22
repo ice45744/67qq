@@ -4,13 +4,14 @@ import {
   ClipboardList, 
   UtensilsCrossed, 
   Settings,
-  Menu as MenuIcon
+  ChefHat,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", icon: Store, label: "ขายหน้าร้าน" },
-  { href: "/orders", icon: ClipboardList, label: "ออเดอร์" },
+  { href: "/orders", icon: ClipboardList, label: "ออเดอร์ / คิดเงิน" },
   { href: "/menu", icon: UtensilsCrossed, label: "จัดการเมนู" },
   { href: "/settings", icon: Settings, label: "ตั้งค่าร้าน" },
 ];
@@ -48,6 +49,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          <a
+            href="/kitchen"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all cursor-pointer mt-2 border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100"
+          >
+            <ChefHat className="size-6 shrink-0" />
+            <span className="hidden lg:flex items-center gap-1.5">
+              ห้องครัว
+              <ExternalLink className="size-3 opacity-60" />
+            </span>
+          </a>
         </nav>
       </aside>
 

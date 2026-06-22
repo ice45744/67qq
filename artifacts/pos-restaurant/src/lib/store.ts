@@ -79,6 +79,8 @@ export function useOrders() {
 
   const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
   const updateOrder = (order: Order) => setOrders(prev => prev.map(o => o.id === order.id ? order : o));
+  const updateOrderStatus = (id: string, status: Order['status']) =>
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
 
   const nextQueueNumber = () => {
     const today = todayKey();
@@ -87,7 +89,7 @@ export function useOrders() {
     return max + 1;
   };
 
-  return { orders, addOrder, updateOrder, nextQueueNumber };
+  return { orders, addOrder, updateOrder, updateOrderStatus, nextQueueNumber };
 }
 
 export function useSettings() {
