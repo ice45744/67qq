@@ -101,22 +101,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* ───── Mobile Bottom Tab Bar ───── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex items-stretch z-50"
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex items-stretch z-50 shadow-[0_-1px_12px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href} className="flex-1">
-              <div className="flex flex-col items-center justify-center py-2 h-16 cursor-pointer">
+              <div
+                style={{ touchAction: "manipulation" }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 h-[72px] cursor-pointer transition-colors active:bg-muted/60",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
                 <div className={cn(
-                  "p-1.5 rounded-xl transition-colors",
-                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                  "p-2 rounded-2xl transition-colors",
+                  isActive ? "bg-primary/10" : ""
                 )}>
-                  <item.icon className={cn("size-5", isActive && "fill-primary/20")} />
+                  <item.icon className={cn("size-6", isActive && "fill-primary/20")} />
                 </div>
                 <span className={cn(
-                  "text-[10px] mt-0.5 leading-tight text-center font-medium transition-colors",
+                  "text-[11px] leading-none font-semibold",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}>
                   {item.label}
@@ -131,12 +137,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           href="/kitchen"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex flex-col items-center justify-center py-2 h-16 text-orange-600"
+          style={{ touchAction: "manipulation" }}
+          className="flex-1 flex flex-col items-center justify-center gap-1 h-[72px] text-orange-500 active:bg-orange-50/60 transition-colors"
         >
-          <div className="p-1.5 rounded-xl bg-orange-50">
-            <ChefHat className="size-5" />
+          <div className="p-2 rounded-2xl bg-orange-50">
+            <ChefHat className="size-6" />
           </div>
-          <span className="text-[10px] mt-0.5 font-medium leading-tight">ครัว</span>
+          <span className="text-[11px] leading-none font-semibold">ครัว</span>
         </a>
       </nav>
     </div>
