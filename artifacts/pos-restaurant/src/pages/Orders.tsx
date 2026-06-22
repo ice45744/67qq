@@ -197,13 +197,13 @@ export default function Orders() {
                   <div className="flex items-center justify-between border-t pt-3">
                     <span className="font-bold text-lg">{formatCurrency(order.total)}</span>
                     <div className="flex gap-2">
-                      {order.status === "ready" && (
+                      {(order.status === "pending" || order.status === "cooking" || order.status === "ready") && (
                         <Button
                           size="sm"
                           className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1"
                           onClick={() => handleOpenBill(order)}
                         >
-                          <Banknote className="size-4" /> ปิดบิล
+                          <Banknote className="size-4" /> คิดเงิน
                         </Button>
                       )}
                       <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setSelectedOrder(order); setIsPreviewOpen(true); }}>
@@ -254,9 +254,9 @@ export default function Orders() {
                         <td className="px-4 py-3 font-bold">{formatCurrency(order.total)}</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
-                            {order.status === "ready" && (
+                            {(order.status === "pending" || order.status === "cooking" || order.status === "ready") && (
                               <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1" onClick={() => handleOpenBill(order)}>
-                                <Banknote className="size-4" /> ปิดบิล
+                                <Banknote className="size-4" /> คิดเงิน
                               </Button>
                             )}
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(order); setIsPreviewOpen(true); }}>
