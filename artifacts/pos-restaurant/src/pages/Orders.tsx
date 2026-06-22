@@ -69,20 +69,21 @@ export default function Orders() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 md:pb-8 bg-muted/10">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-20 md:pb-8 bg-muted/10">
         <div className="max-w-5xl mx-auto space-y-5">
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex justify-between items-center gap-3">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">ออเดอร์ / คิดเงิน</h1>
-              <p className="text-muted-foreground text-sm">จัดการออเดอร์และปิดบิล</p>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">ออเดอร์ / คิดเงิน</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm">จัดการออเดอร์และปิดบิล</p>
             </div>
+            {/* Desktop only — mobile uses the top bar kitchen shortcut */}
             <a
               href="/kitchen"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+              className="hidden sm:inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors shadow-sm"
             >
               <ChefHat className="size-4" />
               หน้าห้องครัว

@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { 
-  Store, 
-  ClipboardList, 
-  UtensilsCrossed, 
+import {
+  Store,
+  ClipboardList,
+  UtensilsCrossed,
   Settings,
   ChefHat,
   ExternalLink,
@@ -10,18 +10,27 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", icon: Store, label: "ขายหน้าร้าน" },
-  { href: "/orders", icon: ClipboardList, label: "คิดเงิน" },
-  { href: "/menu", icon: UtensilsCrossed, label: "จัดการเมนู" },
-  { href: "/settings", icon: Settings, label: "ตั้งค่าร้าน" },
+  { href: "/",         icon: Store,          label: "ขาย",    fullLabel: "ขายหน้าร้าน" },
+  { href: "/orders",   icon: ClipboardList,  label: "คิดเงิน", fullLabel: "คิดเงิน" },
+  { href: "/menu",     icon: UtensilsCrossed,label: "เมนู",   fullLabel: "จัดการเมนู" },
+  { href: "/settings", icon: Settings,        label: "ตั้งค่า", fullLabel: "ตั้งค่าร้าน" },
 ];
+
+const pageTitle: Record<string, string> = {
+  "/":         "ขายหน้าร้าน",
+  "/orders":   "คิดเงิน",
+  "/menu":     "จัดการเมนู",
+  "/settings": "ตั้งค่าร้าน",
+};
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const currentTitle = pageTitle[location] ?? "อร่อยPOS";
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-muted/30">
-      {/* Desktop Sidebar */}
+
+      {/* ───── Desktop Sidebar ───── */}
       <aside className="hidden md:flex flex-col w-20 lg:w-64 border-r bg-card/50 backdrop-blur shrink-0">
         <div className="p-4 lg:p-6 flex items-center justify-center lg:justify-start gap-3">
           <div className="bg-primary text-primary-foreground p-2 rounded-xl shrink-0">
@@ -35,16 +44,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-all cursor-pointer",
-                    isActive 
-                      ? "bg-primary text-primary-foreground font-medium shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                  )}
-                >
+                <div className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-xl transition-all cursor-pointer",
+                  isActive
+                    ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}>
                   <item.icon className={cn("size-5 shrink-0", isActive && "fill-primary-foreground/20")} />
-                  <span className="hidden lg:block text-sm">{item.label}</span>
+                  <span className="hidden lg:block text-sm">{item.fullLabel}</span>
                 </div>
               </Link>
             );
@@ -67,18 +74,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 relative flex flex-col h-full overflow-hidden min-w-0">
+      {/* ───── Mobile Top Bar ───── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-card/95 backdrop-blur border-b flex items-center px-4 gap-3 shadow-sm">
+        <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shrink-0">
+          <Store className="size-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-muted-foreground leading-none mb-0.5">อร่อยPOS</p>
+          <p className="font-bold text-sm leading-none truncate">{currentTitle}</p>
+        </div>
+        <a
+          href="/kitchen"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 bg-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0"
+        >
+          <ChefHat className="size-3.5" />
+          ครัว
+        </a>
+      </header>
+
+      {/* ───── Main Content ───── */}
+      <main className="flex-1 relative flex flex-col h-full overflow-hidden min-w-0 pt-14 md:pt-0">
         {children}
       </main>
 
-      {/* Mobile Bottom Tab */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex items-stretch z-50" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* ───── Mobile Bottom Tab Bar ───── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex items-stretch z-50"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href} className="flex-1">
-              <div className="flex flex-col items-center justify-center py-2 px-1 h-full cursor-pointer">
+              <div className="flex flex-col items-center justify-center py-2 h-16 cursor-pointer">
                 <div className={cn(
                   "p-1.5 rounded-xl transition-colors",
                   isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
@@ -86,8 +116,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <item.icon className={cn("size-5", isActive && "fill-primary/20")} />
                 </div>
                 <span className={cn(
-                  "text-[10px] mt-0.5 transition-colors leading-tight text-center",
-                  isActive ? "text-primary font-semibold" : "text-muted-foreground"
+                  "text-[10px] mt-0.5 leading-tight text-center font-medium transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}>
                   {item.label}
                 </span>
@@ -95,12 +125,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        {/* Kitchen shortcut on mobile */}
+
+        {/* Kitchen shortcut */}
         <a
           href="/kitchen"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex flex-col items-center justify-center py-2 px-1 text-orange-600"
+          className="flex-1 flex flex-col items-center justify-center py-2 h-16 text-orange-600"
         >
           <div className="p-1.5 rounded-xl bg-orange-50">
             <ChefHat className="size-5" />
