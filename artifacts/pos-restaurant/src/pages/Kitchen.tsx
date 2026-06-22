@@ -61,77 +61,36 @@ function playAlertTone() {
   });
 }
 
-// ── TTS helpers ─────────────────────────────────────────────────────────────
+// ── AI TTS helpers (Google TTS via server proxy) ─────────────────────────────
 
-// Voices load asynchronously — wait for them before picking Thai voice
-function loadVoices(): Promise<SpeechSynthesisVoice[]> {
-  return new Promise(resolve => {
-    const v = window.speechSynthesis.getVoices();
-    if (v.length > 0) { resolve(v); return; }
-    const handler = () => resolve(window.speechSynthesis.getVoices());
-    window.speechSynthesis.addEventListener("voiceschanged", handler, { once: true });
-    // Timeout fallback — resolve with whatever is available after 1 s
-    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
-  });
+async function aiSpeak(text: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+    await audio.play();
+  } catch (_) {
+    // silently ignore — alert tone + overlay already notified
+  }
 }
 
-function pickThaiVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  return (
-    voices.find(v => v.lang === "th-TH") ||
-    voices.find(v => v.lang.startsWith("th")) ||
-    null
-  );
-}
+function unlockTTS() { /* no-op: no unlock needed for Audio element */ }
 
-// Unlock TTS on iOS — must be called inside a user-gesture handler
-function unlockTTS() {
-  if (!("speechSynthesis" in window)) return;
-  const u = new SpeechSynthesisUtterance(" ");
-  u.volume = 0;
-  window.speechSynthesis.speak(u);
-  // Trigger voice list load now so it's ready when first order arrives
-  loadVoices();
-}
-
-// Announce new orders by queue number — fully async so Thai voice is found
 async function speakOrder(orders: Order[]) {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-
   const nums = orders.map(o => o.queueNumber);
   const text =
     nums.length === 1
       ? `ออเดอร์ใหม่ คิวที่ ${nums[0]}`
       : `ออเดอร์ใหม่ คิวที่ ${nums.slice(0, -1).join(" และคิวที่ ")} และคิวที่ ${nums[nums.length - 1]}`;
-
-  const voices = await loadVoices();
-  const thaiVoice = pickThaiVoice(voices);
-
-  const u = new SpeechSynthesisUtterance(text);
-  if (thaiVoice) u.voice = thaiVoice;
-  u.lang = "th-TH";
-  u.rate = 0.9;
-  u.pitch = 1.1;
-  u.volume = 1;
-
   // Short delay so alert tone plays first
-  setTimeout(() => window.speechSynthesis.speak(u), 300);
+  setTimeout(() => aiSpeak(text), 350);
 }
 
-// Test announcement — also async
 async function speakTest() {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-
-  const voices = await loadVoices();
-  const thaiVoice = pickThaiVoice(voices);
-
-  const u = new SpeechSynthesisUtterance("เปิดเสียงแจ้งเตือนแล้ว");
-  if (thaiVoice) u.voice = thaiVoice;
-  u.lang = "th-TH";
-  u.rate = 0.9;
-  u.volume = 1;
-  window.speechSynthesis.speak(u);
+  await aiSpeak("เปิดเสียงแจ้งเตือนแล้ว");
 }
 
 // ---------- Full-screen alert overlay ----------

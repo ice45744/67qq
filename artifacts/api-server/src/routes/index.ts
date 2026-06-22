@@ -6,10 +6,12 @@ import ordersRouter from "./orders.js";
 import settingsRouter from "./settings.js";
 import eventsRouter from "./events.js";
 import uploadRouter from "./upload.js";
+import ttsRouter from "./tts.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(ttsRouter);
 router.use(uploadRouter);
 router.use(categoriesRouter);
 router.use(menuRouter);
