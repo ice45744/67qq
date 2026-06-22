@@ -176,7 +176,7 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-full w-full pb-16 md:pb-0">
+    <div className="flex h-full w-full pb-[72px] md:pb-0">
       <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
         <div className="p-4 bg-card/80 backdrop-blur-md sticky top-0 z-10 border-b shadow-sm">
           <ScrollArea className="w-full whitespace-nowrap">

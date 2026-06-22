@@ -4,6 +4,8 @@ import { Order, ShopSettings, formatDate } from "@/lib/store";
 interface ReceiptPrintableProps {
   order: Order;
   settings: ShopSettings;
+  cashReceived?: number;
+  change?: number;
 }
 
 const RECEIPT_FONT = "'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif";
@@ -91,7 +93,7 @@ function QueueTicket({ order, settings }: ReceiptPrintableProps) {
   );
 }
 
-function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
+function CustomerReceipt({ order, settings, cashReceived, change }: ReceiptPrintableProps) {
   return (
     <div
       className="receipt-section"
@@ -134,10 +136,6 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
           <span>วันที่</span>
           <span>{formatDate(order.createdAt)}</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>ประเภท</span>
-          <span>กลับบ้าน</span>
-        </div>
       </div>
 
       <div style={{ marginBottom: "6px" }}>
@@ -175,7 +173,7 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
         ))}
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", paddingTop: "4px", marginBottom: "8px" }}>
+      <div style={{ borderTop: "1px dashed #000", paddingTop: "4px", marginBottom: "4px" }}>
         <div
           style={{
             display: "flex",
@@ -187,6 +185,19 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
           <span>ยอดสุทธิ</span>
           <span>{order.total.toLocaleString("th-TH")} บาท</span>
         </div>
+
+        {cashReceived !== undefined && cashReceived > 0 && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px", fontSize: "12px" }}>
+              <span>รับเงิน</span>
+              <span>{cashReceived.toLocaleString("th-TH")} บาท</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: 700 }}>
+              <span>เงินทอน</span>
+              <span>{(change ?? 0).toLocaleString("th-TH")} บาท</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div style={{ textAlign: "center", marginTop: "8px" }}>
@@ -200,12 +211,12 @@ function CustomerReceipt({ order, settings }: ReceiptPrintableProps) {
 }
 
 export const ReceiptPrintable = forwardRef<HTMLDivElement, ReceiptPrintableProps>(
-  ({ order, settings }, ref) => {
+  ({ order, settings, cashReceived, change }, ref) => {
     return (
       <div ref={ref} id="print-container">
         <QueueTicket order={order} settings={settings} />
         <div className="receipt-cut" />
-        <CustomerReceipt order={order} settings={settings} />
+        <CustomerReceipt order={order} settings={settings} cashReceived={cashReceived} change={change} />
       </div>
     );
   }
