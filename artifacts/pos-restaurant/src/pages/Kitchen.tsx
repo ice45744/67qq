@@ -87,8 +87,8 @@ function speakOrder(orders: Order[]) {
   const nums = orders.map(o => o.queueNumber);
   const text =
     nums.length === 1
-      ? `ออเดอร์ใหม่ หมายเลข ${nums[0]}`
-      : `ออเดอร์ใหม่ หมายเลข ${nums.slice(0, -1).join(" ")} และ ${nums[nums.length - 1]}`;
+      ? `ออเดอร์ใหม่ คิวที่ ${nums[0]}`
+      : `ออเดอร์ใหม่ คิวที่ ${nums.slice(0, -1).join(" และคิวที่ ")} และคิวที่ ${nums[nums.length - 1]}`;
 
   const u = new SpeechSynthesisUtterance(text);
   const thaiVoice = getThaiVoice();
@@ -289,7 +289,20 @@ export default function Kitchen() {
     }
   }, [orders, soundEnabled, notifPermission]);
 
-  const dismissAlert = useCallback(() => setAlertOrders([]), []);
+  // Auto-dismiss alert after 3 seconds
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (alertOrders.length > 0) {
+      if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+      alertTimerRef.current = setTimeout(() => setAlertOrders([]), 3000);
+    }
+    return () => { if (alertTimerRef.current) clearTimeout(alertTimerRef.current); };
+  }, [alertOrders]);
+
+  const dismissAlert = useCallback(() => {
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    setAlertOrders([]);
+  }, []);
 
   // ── Orders split ──────────────────────────────────────────────────────────
   const activeOrders = useMemo(() =>
