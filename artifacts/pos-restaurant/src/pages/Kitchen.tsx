@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed, BellRing, BellOff, Volume2, VolumeX } from "lucide-react";
+import {
+  ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed,
+  BellRing, BellOff, Volume2, VolumeX, AlarmCheck,
+} from "lucide-react";
 import { useOrders, useSettings, formatCurrency } from "@/lib/store";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const SOUND_KEY = "kitchen-sound-enabled";
 
 function useElapsedTick() {
   const [tick, setTick] = useState(0);
@@ -26,7 +31,7 @@ function isUrgent(isoString: string) {
   return (Date.now() - new Date(isoString).getTime()) > 10 * 60 * 1000;
 }
 
-// Shared AudioContext — created once on user gesture, reused for all beeps
+// ---------- Audio ----------
 let sharedCtx: AudioContext | null = null;
 
 function getAudioCtx(): AudioContext | null {
@@ -39,51 +44,191 @@ function getAudioCtx(): AudioContext | null {
 function playBeep() {
   const ctx = getAudioCtx();
   if (!ctx) return;
-  if (ctx.state === "suspended") { ctx.resume(); }
-  const times = [0, 0.2, 0.4];
+  if (ctx.state === "suspended") ctx.resume();
+  const times = [0, 0.25, 0.5, 0.75];
   times.forEach((t) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = "sine";
-    osc.frequency.value = 880;
+    osc.frequency.value = t === 0 ? 660 : 880;
     gain.gain.setValueAtTime(0, ctx.currentTime + t);
-    gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + t + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.16);
+    gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
     osc.start(ctx.currentTime + t);
-    osc.stop(ctx.currentTime + t + 0.17);
+    osc.stop(ctx.currentTime + t + 0.19);
   });
 }
 
-function showBrowserNotification(orders: Order[]) {
-  if (Notification.permission !== "granted") return;
-  const queueNums = orders.map(o => `#${o.queueNumber}`).join(", ");
-  const itemCount = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0);
-  new Notification("🍳 ออเดอร์ใหม่มาแล้ว!", {
-    body: `คิว ${queueNums} · ${itemCount} รายการ`,
-    icon: "/favicon.ico",
-    tag: "new-order",
-    requireInteraction: false,
-  });
+// ---------- Full-screen alert overlay ----------
+function NewOrderOverlay({
+  orders,
+  onDismiss,
+}: {
+  orders: Order[];
+  onDismiss: () => void;
+}) {
+  const totalItems = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0);
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-orange-600 text-white">
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 22 }}
+        className="flex flex-col items-center gap-6 px-8 text-center"
+      >
+        <div className="bg-white/20 rounded-full p-6">
+          <BellRing className="size-16 animate-bounce" />
+        </div>
+
+        <div>
+          <p className="text-5xl font-black leading-tight tracking-tight">
+            ออเดอร์ใหม่!
+          </p>
+          <p className="text-orange-100 text-xl mt-2">
+            {orders.length === 1
+              ? `คิว #${orders[0].queueNumber}`
+              : `คิว ${orders.map(o => `#${o.queueNumber}`).join(", ")}`}
+          </p>
+          <p className="text-orange-200 text-lg mt-1">{totalItems} รายการ</p>
+        </div>
+
+        {/* Item list */}
+        <div className="bg-white/10 rounded-2xl px-6 py-4 w-full max-w-sm space-y-1.5 text-left">
+          {orders.flatMap(o =>
+            o.items.map((item, i) => (
+              <div key={`${o.id}-${i}`} className="flex justify-between text-base font-semibold">
+                <span>{item.name}</span>
+                <span className="text-orange-200">×{item.qty}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <Button
+          onClick={onDismiss}
+          className="mt-2 h-16 px-12 text-xl font-black bg-white text-orange-600 hover:bg-orange-50 rounded-2xl shadow-lg"
+        >
+          <AlarmCheck className="size-6 mr-2" />
+          รับทราบ
+        </Button>
+      </motion.div>
+    </div>
+  );
 }
 
+// ---------- Setup prompt (full-screen, shown once) ----------
+function SoundSetupOverlay({ onEnable }: { onEnable: () => void }) {
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-gray-950/95 text-white px-8">
+      <motion.div
+        initial={{ scale: 0.85, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
+        className="flex flex-col items-center gap-6 text-center max-w-xs"
+      >
+        <div className="bg-blue-500/20 rounded-full p-6">
+          <Volume2 className="size-14 text-blue-400" />
+        </div>
+        <div>
+          <p className="text-3xl font-black">เปิดเสียงแจ้งเตือน</p>
+          <p className="text-gray-400 mt-2 text-base leading-relaxed">
+            กดปุ่มด้านล่างเพื่อเปิดเสียงแจ้งเตือนออเดอร์ใหม่
+            <br />
+            ระบบจะจำการตั้งค่านี้ไว้ตลอดไป
+          </p>
+        </div>
+        <Button
+          onClick={onEnable}
+          className="h-14 px-10 text-lg font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-2xl w-full"
+        >
+          <Volume2 className="size-5 mr-2" />
+          เปิดเสียง
+        </Button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ---------- Main Kitchen page ----------
 export default function Kitchen() {
   const { orders, updateOrder } = useOrders();
   const { settings } = useSettings();
   useElapsedTick();
 
-  const knownIds = useRef<Set<string>>(new Set());
-  const isFirstLoad = useRef(true);
-  const [newOrderBanner, setNewOrderBanner] = useState<Order[]>([]);
-  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── Sound: persisted in localStorage ──────────────────────────────────────
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem(SOUND_KEY) === "1"; } catch { return false; }
+  });
+  const [showSetup, setShowSetup] = useState<boolean>(() => {
+    try { return localStorage.getItem(SOUND_KEY) !== "1"; } catch { return true; }
+  });
 
-  // Sound & notification permission state
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const enableSound = useCallback(() => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === "suspended") ctx.resume();
+    setSoundEnabled(true);
+    setShowSetup(false);
+    try { localStorage.setItem(SOUND_KEY, "1"); } catch (_) {}
+    playBeep();
+  }, []);
+
+  const disableSound = useCallback(() => {
+    setSoundEnabled(false);
+    try { localStorage.removeItem(SOUND_KEY); } catch (_) {}
+    setShowSetup(true);
+  }, []);
+
+  // ── Notification permission ────────────────────────────────────────────────
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "denied"
   );
+  const requestNotifPermission = useCallback(async () => {
+    if (typeof Notification === "undefined") return;
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+  }, []);
 
+  // ── New order detection ────────────────────────────────────────────────────
+  // We use a ref for knownIds so we never lose its state across re-renders.
+  // isFirstLoad guards against firing alerts for existing orders on mount.
+  const knownIds = useRef<Set<string>>(new Set());
+  const isFirstLoad = useRef(true);
+  const ordersLoadedOnce = useRef(false);
+
+  const [alertOrders, setAlertOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    // On the very first non-empty orders response, seed knownIds without alerting.
+    if (!ordersLoadedOnce.current && orders.length > 0) {
+      ordersLoadedOnce.current = true;
+      orders.forEach(o => knownIds.current.add(o.id));
+      isFirstLoad.current = false;
+      return;
+    }
+
+    // If still no orders yet, keep waiting.
+    if (isFirstLoad.current) return;
+
+    const incoming: Order[] = [];
+    orders.forEach(o => {
+      if (!knownIds.current.has(o.id)) {
+        knownIds.current.add(o.id);
+        if (o.status === "pending") incoming.push(o);
+      }
+    });
+
+    if (incoming.length > 0) {
+      if (soundEnabled) playBeep();
+      if (notifPermission === "granted") showBrowserNotification(incoming);
+      setAlertOrders(incoming);
+    }
+  }, [orders, soundEnabled, notifPermission]);
+
+  const dismissAlert = useCallback(() => setAlertOrders([]), []);
+
+  // ── Orders split ──────────────────────────────────────────────────────────
   const activeOrders = useMemo(() =>
     orders
       .filter(o => o.status === "pending" || o.status === "cooking")
@@ -99,52 +244,43 @@ export default function Kitchen() {
     [orders]
   );
 
-  // Request notification permission
-  const requestNotifPermission = useCallback(async () => {
-    if (typeof Notification === "undefined") return;
-    const result = await Notification.requestPermission();
-    setNotifPermission(result);
-  }, []);
-
-  // Unlock sound on user gesture
-  const unlockSound = useCallback(() => {
-    const ctx = getAudioCtx();
-    if (ctx && ctx.state === "suspended") ctx.resume();
-    setSoundEnabled(true);
-    // Play a short test beep to confirm
-    playBeep();
-  }, []);
-
-  // Detect new pending orders → beep + banner + browser notification
-  useEffect(() => {
-    const incoming: Order[] = [];
-    orders.forEach(o => {
-      if (!knownIds.current.has(o.id)) {
-        if (!isFirstLoad.current && o.status === "pending") incoming.push(o);
-        knownIds.current.add(o.id);
-      }
-    });
-
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false;
-      return;
-    }
-
-    if (incoming.length > 0) {
-      if (soundEnabled) playBeep();
-      showBrowserNotification(incoming);
-      setNewOrderBanner(incoming);
-      if (bannerTimer.current) clearTimeout(bannerTimer.current);
-      bannerTimer.current = setTimeout(() => setNewOrderBanner([]), 6000);
-    }
-  }, [orders, soundEnabled]);
-
   const markCooking = useCallback((order: Order) => updateOrder({ ...order, status: "cooking" } as Order), [updateOrder]);
-  const markReady   = useCallback((order: Order) => updateOrder({ ...order, status: "ready" } as Order), [updateOrder]);
+  const markReady   = useCallback((order: Order) => updateOrder({ ...order, status: "ready" }   as Order), [updateOrder]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      {/* Header */}
+
+      {/* ── Full-screen new-order alert ── */}
+      <AnimatePresence>
+        {alertOrders.length > 0 && (
+          <motion.div
+            key="alert-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <NewOrderOverlay orders={alertOrders} onDismiss={dismissAlert} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Sound setup overlay (shown until user enables sound) ── */}
+      <AnimatePresence>
+        {showSetup && alertOrders.length === 0 && (
+          <motion.div
+            key="setup-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SoundSetupOverlay onEnable={enableSound} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Header ── */}
       <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="bg-orange-500 p-2 rounded-xl shrink-0">
@@ -159,14 +295,13 @@ export default function Kitchen() {
         <div className="flex items-center gap-2">
           {/* Sound toggle */}
           <button
-            onClick={soundEnabled ? () => setSoundEnabled(false) : unlockSound}
+            onClick={soundEnabled ? disableSound : enableSound}
             className={cn(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-medium transition-colors",
               soundEnabled
                 ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
                 : "bg-gray-700/60 text-gray-400 hover:bg-gray-700"
             )}
-            title={soundEnabled ? "ปิดเสียง" : "เปิดเสียง"}
           >
             {soundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
             <span className="hidden sm:inline">{soundEnabled ? "เสียงเปิด" : "เปิดเสียง"}</span>
@@ -184,11 +319,6 @@ export default function Kitchen() {
                 ? "bg-red-500/20 text-red-400 cursor-not-allowed"
                 : "bg-gray-700/60 text-gray-400 hover:bg-gray-700 cursor-pointer"
             )}
-            title={
-              notifPermission === "granted" ? "แจ้งเตือนเปิดแล้ว"
-              : notifPermission === "denied" ? "ถูกบล็อกโดย browser"
-              : "กดเพื่อเปิดแจ้งเตือน"
-            }
           >
             {notifPermission === "granted"
               ? <BellRing className="size-3.5" />
@@ -215,64 +345,8 @@ export default function Kitchen() {
         </div>
       </header>
 
-      {/* Setup prompt — shown once if neither sound nor notif is enabled */}
-      {!soundEnabled && notifPermission !== "granted" && (
-        <div className="bg-gray-800/80 border-b border-gray-700 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-sm">ตั้งค่าการแจ้งเตือนก่อนใช้งาน</p>
-            <p className="text-gray-400 text-xs mt-0.5">เปิดเสียงและแจ้งเตือนเพื่อรับออเดอร์ใหม่ได้ทันที</p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Button size="sm" onClick={unlockSound} className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5">
-              <Volume2 className="size-3.5" /> เปิดเสียง
-            </Button>
-            {notifPermission !== "denied" && (
-              <Button size="sm" onClick={requestNotifPermission} className="bg-orange-600 hover:bg-orange-500 text-white gap-1.5">
-                <Bell className="size-3.5" /> เปิดแจ้งเตือน
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 🔔 New order notification banner */}
-      <AnimatePresence>
-        {newOrderBanner.length > 0 && (
-          <motion.div
-            key="banner"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-orange-500 px-4 py-3 flex items-center gap-3">
-              <div className="bg-white/20 rounded-full p-2 shrink-0">
-                <BellRing className="size-5 text-white animate-bounce" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-white text-base leading-tight">
-                  ออเดอร์ใหม่มาแล้ว!
-                </p>
-                <p className="text-orange-100 text-sm mt-0.5">
-                  คิว {newOrderBanner.map(o => `#${o.queueNumber}`).join(", ")}
-                  {" · "}
-                  {newOrderBanner.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0)} รายการ
-                </p>
-              </div>
-              <button
-                onClick={() => setNewOrderBanner([])}
-                className="text-white/70 hover:text-white text-2xl leading-none px-1"
-              >
-                ×
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+      {/* ── Active orders ── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Active orders */}
         <div className="flex-1 overflow-y-auto p-3 lg:p-5 lg:border-r lg:border-gray-800">
           <h2 className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">
             <Clock className="size-3.5" /> รอทำ / กำลังทำ
@@ -420,4 +494,17 @@ export default function Kitchen() {
       </div>
     </div>
   );
+}
+
+// ── Browser notification (helper) ──────────────────────────────────────────
+function showBrowserNotification(orders: Order[]) {
+  if (Notification.permission !== "granted") return;
+  const queueNums = orders.map(o => `#${o.queueNumber}`).join(", ");
+  const itemCount = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0);
+  new Notification("🍳 ออเดอร์ใหม่มาแล้ว!", {
+    body: `คิว ${queueNums} · ${itemCount} รายการ`,
+    icon: "/favicon.ico",
+    tag: "new-order",
+    requireInteraction: false,
+  });
 }
