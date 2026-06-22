@@ -209,7 +209,7 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-full w-full pb-[72px] md:pb-0">
+    <div className="flex h-full w-full pb-[84px] md:pb-0">
       <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
         {/* Category bar */}
         <div className="p-4 bg-card/80 backdrop-blur-md sticky top-0 z-10 border-b shadow-sm">
@@ -306,7 +306,7 @@ export default function Home() {
       </div>
 
       {/* Mobile floating cart button */}
-      <div className="md:hidden fixed bottom-[72px] left-0 right-0 p-3 z-40">
+      <div className="md:hidden fixed bottom-[84px] left-0 right-0 p-3 z-40">
         <button
           style={{ touchAction: "manipulation" }}
           onClick={() => setIsMobileCartOpen(true)}

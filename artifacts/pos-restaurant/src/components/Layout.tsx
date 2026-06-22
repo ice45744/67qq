@@ -111,18 +111,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div
                 style={{ touchAction: "manipulation" }}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 h-[72px] cursor-pointer transition-colors active:bg-muted/60",
+                  "flex flex-col items-center justify-center gap-1.5 h-[84px] cursor-pointer transition-colors active:bg-muted/60",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <div className={cn(
-                  "p-2 rounded-2xl transition-colors",
+                  "p-2.5 rounded-2xl transition-colors",
                   isActive ? "bg-primary/10" : ""
                 )}>
-                  <item.icon className={cn("size-6", isActive && "fill-primary/20")} />
+                  <item.icon className={cn("size-7", isActive && "fill-primary/20")} />
                 </div>
                 <span className={cn(
-                  "text-[11px] leading-none font-semibold",
+                  "text-xs leading-none font-bold",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}>
                   {item.label}
@@ -138,12 +138,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
           target="_blank"
           rel="noopener noreferrer"
           style={{ touchAction: "manipulation" }}
-          className="flex-1 flex flex-col items-center justify-center gap-1 h-[72px] text-orange-500 active:bg-orange-50/60 transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-1.5 h-[84px] text-orange-500 active:bg-orange-50/60 transition-colors"
         >
-          <div className="p-2 rounded-2xl bg-orange-50">
-            <ChefHat className="size-6" />
+          <div className="p-2.5 rounded-2xl bg-orange-50">
+            <ChefHat className="size-7" />
           </div>
-          <span className="text-[11px] leading-none font-semibold">ครัว</span>
+          <span className="text-xs leading-none font-bold">ครัว</span>
         </a>
       </nav>
     </div>
