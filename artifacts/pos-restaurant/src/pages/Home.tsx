@@ -76,8 +76,8 @@ export default function Home() {
     addOrder(newOrder);
     setCart([]);
     setIsMobileCartOpen(false);
-    // Show confirmation dialog instead of auto-printing
-    setConfirmedOrder(newOrder);
+    // Delay dialog until sheet close animation finishes (avoids Radix overlay conflict)
+    setTimeout(() => setConfirmedOrder(newOrder), 320);
   };
 
   const handlePrint = () => {
