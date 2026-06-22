@@ -83,6 +83,7 @@ export default function Home() {
   const handlePrint = () => {
     if (!confirmedOrder) return;
     setPrintingOrder(confirmedOrder);
+    setConfirmedOrder(null); // ปิด dialog ก่อนพิมพ์
     setTimeout(() => {
       window.print();
       setTimeout(() => setPrintingOrder(null), 600);
