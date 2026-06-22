@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed } from "lucide-react";
+import { ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed, BellRing } from "lucide-react";
 import { useOrders, useSettings, formatCurrency } from "@/lib/store";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,37 @@ function isUrgent(isoString: string) {
   return (Date.now() - new Date(isoString).getTime()) > 10 * 60 * 1000;
 }
 
+/** Play a short notification beep via Web Audio API — no file needed */
+function playBeep() {
+  try {
+    const ctx = new AudioContext();
+    const times = [0, 0.18, 0.36];
+    times.forEach((t) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, ctx.currentTime + t);
+      gain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.15);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch (_) {}
+}
+
 export default function Kitchen() {
   const { orders, updateOrder } = useOrders();
   const { settings } = useSettings();
   useElapsedTick();
+
+  const knownIds = useRef<Set<string>>(new Set());
+  const isFirstLoad = useRef(true);
+  const [newOrderBanner, setNewOrderBanner] = useState<Order[]>([]);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeOrders = useMemo(() =>
     orders
@@ -45,6 +72,31 @@ export default function Kitchen() {
       .slice(0, 10),
     [orders]
   );
+
+  // Detect new pending orders
+  useEffect(() => {
+    const incoming: Order[] = [];
+    orders.forEach(o => {
+      if (o.status === "pending" && !knownIds.current.has(o.id)) {
+        if (!isFirstLoad.current) incoming.push(o);
+        knownIds.current.add(o.id);
+      } else {
+        knownIds.current.add(o.id);
+      }
+    });
+
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+
+    if (incoming.length > 0) {
+      playBeep();
+      setNewOrderBanner(incoming);
+      if (bannerTimer.current) clearTimeout(bannerTimer.current);
+      bannerTimer.current = setTimeout(() => setNewOrderBanner([]), 5000);
+    }
+  }, [orders]);
 
   const markCooking = (order: Order) => updateOrder({ ...order, status: "cooking" });
   const markReady   = (order: Order) => updateOrder({ ...order, status: "ready" });
@@ -75,6 +127,42 @@ export default function Kitchen() {
           </div>
         </div>
       </header>
+
+      {/* 🔔 New order notification banner */}
+      <AnimatePresence>
+        {newOrderBanner.length > 0 && (
+          <motion.div
+            key="banner"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-orange-500 px-4 py-3 flex items-center gap-3">
+              <div className="bg-white/20 rounded-full p-2 shrink-0">
+                <BellRing className="size-5 text-white animate-bounce" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-white text-base leading-tight">
+                  ออเดอร์ใหม่มาแล้ว!
+                </p>
+                <p className="text-orange-100 text-sm mt-0.5">
+                  คิว {newOrderBanner.map(o => `#${o.queueNumber}`).join(", ")}
+                  {" · "}
+                  {newOrderBanner.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0)} รายการ
+                </p>
+              </div>
+              <button
+                onClick={() => setNewOrderBanner([])}
+                className="text-white/70 hover:text-white text-2xl leading-none px-1"
+              >
+                ×
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Active orders */}
@@ -120,8 +208,8 @@ export default function Kitchen() {
                               </span>
                             )}
                             {order.status === "pending" && !urgent && (
-                              <span className="bg-gray-700 text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                ใหม่
+                              <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                ใหม่!
                               </span>
                             )}
                             {urgent && order.status === "pending" && (
@@ -184,7 +272,7 @@ export default function Kitchen() {
           )}
         </div>
 
-        {/* Ready orders sidebar — horizontal on mobile, vertical on lg */}
+        {/* Ready orders sidebar */}
         <div className="lg:w-72 xl:w-80 shrink-0 bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-800">
           <div className="p-3 lg:p-4">
             <h2 className="text-gray-400 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">

@@ -46,8 +46,14 @@ function useLocalStorage<T>(key: string, initialValue: T) {
         console.error(error);
       }
     };
+    // same-tab updates
     window.addEventListener('local-storage', handleStorageChange);
-    return () => window.removeEventListener('local-storage', handleStorageChange);
+    // cross-tab updates (native storage event fires in OTHER tabs)
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('local-storage', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [key]);
 
   return [storedValue, setValue] as const;
