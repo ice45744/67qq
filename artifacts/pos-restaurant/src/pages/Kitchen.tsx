@@ -31,7 +31,7 @@ function isUrgent(isoString: string) {
   return (Date.now() - new Date(isoString).getTime()) > 10 * 60 * 1000;
 }
 
-// ---------- Audio ----------
+// ---------- Audio & TTS ----------
 let sharedCtx: AudioContext | null = null;
 
 function getAudioCtx(): AudioContext | null {
@@ -41,24 +41,78 @@ function getAudioCtx(): AudioContext | null {
   return sharedCtx;
 }
 
-function playBeep() {
+// Short alert tone played immediately before the voice (instant feedback)
+function playAlertTone() {
   const ctx = getAudioCtx();
   if (!ctx) return;
   if (ctx.state === "suspended") ctx.resume();
-  const times = [0, 0.25, 0.5, 0.75];
-  times.forEach((t) => {
+  [0, 0.18].forEach((t) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = "sine";
-    osc.frequency.value = t === 0 ? 660 : 880;
+    osc.frequency.value = 880;
     gain.gain.setValueAtTime(0, ctx.currentTime + t);
-    gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + t + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
+    gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14);
     osc.start(ctx.currentTime + t);
-    osc.stop(ctx.currentTime + t + 0.19);
+    osc.stop(ctx.currentTime + t + 0.15);
   });
+}
+
+// Pick the best Thai voice available, or fall back to default
+function getThaiVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find(v => v.lang === "th-TH") ||
+    voices.find(v => v.lang.startsWith("th")) ||
+    null
+  );
+}
+
+// Unlock TTS on iOS — must be called inside a user-gesture handler
+function unlockTTS() {
+  if (!("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance("");
+  u.volume = 0;
+  window.speechSynthesis.speak(u);
+}
+
+// Announce new orders by queue number
+function speakOrder(orders: Order[]) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+
+  const nums = orders.map(o => o.queueNumber);
+  const text =
+    nums.length === 1
+      ? `ออเดอร์ใหม่ หมายเลข ${nums[0]}`
+      : `ออเดอร์ใหม่ หมายเลข ${nums.slice(0, -1).join(" ")} และ ${nums[nums.length - 1]}`;
+
+  const u = new SpeechSynthesisUtterance(text);
+  const thaiVoice = getThaiVoice();
+  if (thaiVoice) u.voice = thaiVoice;
+  u.lang = "th-TH";
+  u.rate = 0.95;
+  u.pitch = 1.1;
+  u.volume = 1;
+
+  // Delay slightly so alert tone plays first
+  setTimeout(() => window.speechSynthesis.speak(u), 250);
+}
+
+// Test announcement used when enabling sound
+function speakTest() {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance("เปิดเสียงแจ้งเตือนแล้ว");
+  const thaiVoice = getThaiVoice();
+  if (thaiVoice) u.voice = thaiVoice;
+  u.lang = "th-TH";
+  u.rate = 0.95;
+  u.volume = 1;
+  window.speechSynthesis.speak(u);
 }
 
 // ---------- Full-screen alert overlay ----------
@@ -134,17 +188,19 @@ function SoundSetupOverlay({ onEnable }: { onEnable: () => void }) {
         <div>
           <p className="text-3xl font-black">เปิดเสียงแจ้งเตือน</p>
           <p className="text-gray-400 mt-2 text-base leading-relaxed">
-            กดปุ่มด้านล่างเพื่อเปิดเสียงแจ้งเตือนออเดอร์ใหม่
-            <br />
-            ระบบจะจำการตั้งค่านี้ไว้ตลอดไป
+            เมื่อมีออเดอร์ใหม่ ระบบจะพูดว่า
           </p>
+          <p className="text-white font-semibold text-base mt-1 bg-white/10 rounded-xl px-4 py-2">
+            🔊 "ออเดอร์ใหม่ หมายเลข 1"
+          </p>
+          <p className="text-gray-500 text-sm mt-3">ระบบจะจำการตั้งค่านี้ไว้ตลอดไป</p>
         </div>
         <Button
           onClick={onEnable}
           className="h-14 px-10 text-lg font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-2xl w-full"
         >
           <Volume2 className="size-5 mr-2" />
-          เปิดเสียง
+          เปิดเสียงพูด
         </Button>
       </motion.div>
     </div>
@@ -166,12 +222,16 @@ export default function Kitchen() {
   });
 
   const enableSound = useCallback(() => {
+    // Unlock AudioContext + TTS inside this user-gesture handler (required on iOS)
     const ctx = getAudioCtx();
     if (ctx && ctx.state === "suspended") ctx.resume();
+    unlockTTS();
     setSoundEnabled(true);
     setShowSetup(false);
     try { localStorage.setItem(SOUND_KEY, "1"); } catch (_) {}
-    playBeep();
+    // Play tone + Thai voice confirmation
+    playAlertTone();
+    speakTest();
   }, []);
 
   const disableSound = useCallback(() => {
@@ -220,7 +280,10 @@ export default function Kitchen() {
     });
 
     if (incoming.length > 0) {
-      if (soundEnabled) playBeep();
+      if (soundEnabled) {
+        playAlertTone();
+        speakOrder(incoming);
+      }
       if (notifPermission === "granted") showBrowserNotification(incoming);
       setAlertOrders(incoming);
     }
