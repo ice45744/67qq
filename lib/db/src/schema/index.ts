@@ -1,20 +1,45 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
+import { pgTable, text, integer, boolean, jsonb, timestamp, real } from "drizzle-orm/pg-core";
 
-export {}
+export type OrderItem = {
+  menuItemId: string;
+  name: string;
+  price: number;
+  qty: number;
+  note?: string;
+};
+
+export const categoriesTable = pgTable("categories", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const menuItemsTable = pgTable("menu_items", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  price: real("price").notNull(),
+  categoryId: text("category_id").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  available: boolean("available").notNull().default(true),
+});
+
+export const ordersTable = pgTable("orders", {
+  id: text("id").primaryKey(),
+  queueNumber: integer("queue_number").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  items: jsonb("items").notNull().$type<OrderItem[]>(),
+  total: real("total").notNull(),
+  status: text("status").notNull().default("pending"),
+  tableNote: text("table_note"),
+});
+
+export const settingsTable = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
+export type Category = typeof categoriesTable.$inferSelect;
+export type MenuItem = typeof menuItemsTable.$inferSelect;
+export type Order = typeof ordersTable.$inferSelect;
+export type Setting = typeof settingsTable.$inferSelect;

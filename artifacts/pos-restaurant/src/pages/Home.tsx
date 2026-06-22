@@ -62,18 +62,17 @@ export default function Home() {
     return orders.filter(o => o.createdAt.slice(0, 10) === today).length;
   }, [orders]);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const queueNumber = nextQueueNumber();
-    const newOrder: Order = {
+    const queueNumber = await nextQueueNumber();
+    const newOrder = await addOrder({
       id: crypto.randomUUID(),
       queueNumber,
       createdAt: new Date().toISOString(),
       items: [...cart],
       total,
       status: "pending",
-    };
-    addOrder(newOrder);
+    });
     setCart([]);
     setIsMobileCartOpen(false);
     // Delay dialog until sheet close animation finishes (avoids Radix overlay conflict)

@@ -31,9 +31,9 @@ export function BillCloseDialog({ order, open, onOpenChange, onPaid }: BillClose
 
   const handleClose = () => { reset(); onOpenChange(false); };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!order || !canPay) return;
-    updateOrderStatus(order.id, "paid");
+    await updateOrderStatus(order.id, "paid");
     const paidOrder: Order = { ...order, status: "paid" };
     // Close dialog first, then parent will trigger print
     reset();

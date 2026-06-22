@@ -1,115 +1,164 @@
-import { useState, useEffect } from 'react';
-import { Category, MenuItem, Order, ShopSettings } from './types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { api, Category, MenuItem, Order, ShopSettings, CartItem } from "./api";
 
-export type { Category, MenuItem, CartItem, Order, ShopSettings } from './types';
-
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'cat-menu', name: 'เมนู', sortOrder: 1 },
-  { id: 'cat-topping', name: 'ท็อปปิ้ง', sortOrder: 2 },
-];
-
-const DEFAULT_MENU_ITEMS: MenuItem[] = [];
-
-const DEFAULT_SETTINGS: ShopSettings = {
-  name: 'ร้านของฉัน',
-  footerMessage: 'ขอบคุณที่ใช้บริการ',
-};
-
-function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(error);
-      return initialValue;
-    }
-  });
-
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      window.dispatchEvent(new Event('local-storage'));
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const item = window.localStorage.getItem(key);
-        if (item) setStoredValue(JSON.parse(item));
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    // same-tab updates
-    window.addEventListener('local-storage', handleStorageChange);
-    // cross-tab updates (native storage event fires in OTHER tabs)
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('local-storage', handleStorageChange);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [key]);
-
-  return [storedValue, setValue] as const;
-}
-
-export function useCategories() {
-  const [categories, setCategories] = useLocalStorage<Category[]>('pos_categories_v3', DEFAULT_CATEGORIES);
-  const addCategory = (cat: Category) => setCategories(prev => [...prev, cat].sort((a,b) => a.sortOrder - b.sortOrder));
-  const updateCategory = (cat: Category) => setCategories(prev => prev.map(c => c.id === cat.id ? cat : c).sort((a,b) => a.sortOrder - b.sortOrder));
-  const deleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
-  return { categories, addCategory, updateCategory, deleteCategory };
-}
-
-export function useMenu() {
-  const [menuItems, setMenuItems] = useLocalStorage<MenuItem[]>('pos_menu_items_v3', DEFAULT_MENU_ITEMS);
-  const addMenuItem = (item: MenuItem) => setMenuItems(prev => [...prev, item]);
-  const updateMenuItem = (item: MenuItem) => setMenuItems(prev => prev.map(m => m.id === item.id ? item : m));
-  const deleteMenuItem = (id: string) => setMenuItems(prev => prev.filter(m => m.id !== id));
-  return { menuItems, addMenuItem, updateMenuItem, deleteMenuItem };
-}
-
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-export function useOrders() {
-  const [orders, setOrders] = useLocalStorage<Order[]>('pos_orders_v2', []);
-
-  const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
-  const updateOrder = (order: Order) => setOrders(prev => prev.map(o => o.id === order.id ? order : o));
-  const updateOrderStatus = (id: string, status: Order['status']) =>
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-
-  const nextQueueNumber = () => {
-    const today = todayKey();
-    const todays = orders.filter(o => o.createdAt.slice(0, 10) === today);
-    const max = todays.reduce((m, o) => Math.max(m, o.queueNumber || 0), 0);
-    return max + 1;
-  };
-
-  return { orders, addOrder, updateOrder, updateOrderStatus, nextQueueNumber };
-}
-
-export function useSettings() {
-  const [settings, setSettings] = useLocalStorage<ShopSettings>('pos_settings_v2', DEFAULT_SETTINGS);
-  return { settings, setSettings };
-}
+export type { Category, MenuItem, CartItem, Order, ShopSettings } from "./api";
 
 export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount);
+  return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 }
 
 export function formatDate(isoString: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
+  return new Intl.DateTimeFormat("th-TH", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
   }).format(new Date(isoString));
+}
+
+function useSSE<T>(
+  eventName: string,
+  onEvent: (data: T) => void
+) {
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+    const handler = (e: MessageEvent) => {
+      try {
+        onEventRef.current(JSON.parse(e.data));
+      } catch (_) {}
+    };
+    es.addEventListener(eventName, handler);
+    return () => {
+      es.removeEventListener(eventName, handler);
+      es.close();
+    };
+  }, [eventName]);
+}
+
+export function useCategories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.categories.list().then(setCategories).finally(() => setLoading(false));
+  }, []);
+
+  useSSE<Category>("categories:update", (updated) => {
+    setCategories(prev => {
+      const exists = prev.find(c => c.id === updated.id);
+      const next = exists
+        ? prev.map(c => c.id === updated.id ? updated : c)
+        : [...prev, updated];
+      return next.sort((a, b) => a.sortOrder - b.sortOrder);
+    });
+  });
+
+  useSSE<{ id: string }>("categories:delete", ({ id }) => {
+    setCategories(prev => prev.filter(c => c.id !== id));
+  });
+
+  const addCategory = useCallback(async (cat: Category) => {
+    await api.categories.create(cat);
+  }, []);
+
+  const updateCategory = useCallback(async (cat: Category) => {
+    await api.categories.update(cat.id, cat);
+  }, []);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    await api.categories.delete(id);
+  }, []);
+
+  return { categories, loading, addCategory, updateCategory, deleteCategory };
+}
+
+export function useMenu() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.menu.list().then(setMenuItems).finally(() => setLoading(false));
+  }, []);
+
+  useSSE<MenuItem>("menu:update", (updated) => {
+    setMenuItems(prev => {
+      const exists = prev.find(m => m.id === updated.id);
+      return exists ? prev.map(m => m.id === updated.id ? updated : m) : [...prev, updated];
+    });
+  });
+
+  useSSE<{ id: string }>("menu:delete", ({ id }) => {
+    setMenuItems(prev => prev.filter(m => m.id !== id));
+  });
+
+  const addMenuItem = useCallback(async (item: MenuItem) => {
+    await api.menu.create(item);
+  }, []);
+
+  const updateMenuItem = useCallback(async (item: MenuItem) => {
+    await api.menu.update(item.id, item);
+  }, []);
+
+  const deleteMenuItem = useCallback(async (id: string) => {
+    await api.menu.delete(id);
+  }, []);
+
+  return { menuItems, loading, addMenuItem, updateMenuItem, deleteMenuItem };
+}
+
+export function useOrders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.orders.list().then(setOrders).finally(() => setLoading(false));
+  }, []);
+
+  useSSE<Order>("orders:new", (order) => {
+    setOrders(prev => [order, ...prev]);
+  });
+
+  useSSE<Order>("orders:update", (updated) => {
+    setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+  });
+
+  const addOrder = useCallback(async (order: Omit<Order, "createdAt"> & { createdAt?: string }) => {
+    return api.orders.create(order);
+  }, []);
+
+  const updateOrder = useCallback(async (order: Order) => {
+    return api.orders.update(order.id, order);
+  }, []);
+
+  const updateOrderStatus = useCallback(async (id: string, status: Order["status"]) => {
+    return api.orders.update(id, { status });
+  }, []);
+
+  const nextQueueNumber = useCallback(async (): Promise<number> => {
+    const { maxQueue } = await api.orders.todayCount();
+    return maxQueue + 1;
+  }, []);
+
+  return { orders, loading, addOrder, updateOrder, updateOrderStatus, nextQueueNumber };
+}
+
+export function useSettings() {
+  const [settings, setSettings] = useState<ShopSettings>({
+    name: "ร้านของฉัน",
+    footerMessage: "ขอบคุณที่ใช้บริการ",
+  });
+
+  useEffect(() => {
+    api.settings.get().then(setSettings);
+  }, []);
+
+  useSSE<ShopSettings>("settings:update", setSettings);
+
+  const saveSettings = useCallback(async (data: Partial<ShopSettings>) => {
+    const updated = await api.settings.update(data);
+    setSettings(updated);
+  }, []);
+
+  return { settings, setSettings: saveSettings };
 }

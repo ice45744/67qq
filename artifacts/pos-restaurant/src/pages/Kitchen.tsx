@@ -98,8 +98,8 @@ export default function Kitchen() {
     }
   }, [orders]);
 
-  const markCooking = (order: Order) => updateOrder({ ...order, status: "cooking" });
-  const markReady   = (order: Order) => updateOrder({ ...order, status: "ready" });
+  const markCooking = (order: Order) => updateOrder({ ...order, status: "cooking" } as Order);
+  const markReady   = (order: Order) => updateOrder({ ...order, status: "ready" } as Order);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">

@@ -48,7 +48,7 @@ export default function MenuAdmin() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name || !price || !categoryId) {
       toast({ variant: "destructive", title: "กรุณากรอกข้อมูลให้ครบ" });
       return;
@@ -64,18 +64,18 @@ export default function MenuAdmin() {
     };
 
     if (editingItem) {
-      updateMenuItem(payload);
+      await updateMenuItem(payload);
       toast({ title: "บันทึกการแก้ไขแล้ว" });
     } else {
-      addMenuItem(payload);
+      await addMenuItem(payload);
       toast({ title: "เพิ่มเมนูใหม่แล้ว" });
     }
     setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("ยืนยันการลบเมนูนี้?")) {
-      deleteMenuItem(id);
+      await deleteMenuItem(id);
       toast({ title: "ลบเมนูแล้ว" });
     }
   };
@@ -103,7 +103,7 @@ export default function MenuAdmin() {
     setIsCatDialogOpen(true);
   };
 
-  const handleSaveCat = () => {
+  const handleSaveCat = async () => {
     const trimmed = catName.trim();
     if (!trimmed) {
       toast({ variant: "destructive", title: "กรุณากรอกชื่อหมวดหมู่" });
@@ -111,11 +111,11 @@ export default function MenuAdmin() {
     }
 
     if (editingCat) {
-      updateCategory({ ...editingCat, name: trimmed });
+      await updateCategory({ ...editingCat, name: trimmed });
       toast({ title: "แก้ไขหมวดหมู่แล้ว" });
     } else {
       const maxSort = categories.reduce((m, c) => Math.max(m, c.sortOrder), 0);
-      addCategory({
+      await addCategory({
         id: `cat-${Date.now()}`,
         name: trimmed,
         sortOrder: maxSort + 1,
@@ -125,16 +125,14 @@ export default function MenuAdmin() {
     setIsCatDialogOpen(false);
   };
 
-  const handleDeleteCat = (cat: Category) => {
+  const handleDeleteCat = async (cat: Category) => {
     const itemsInCat = menuItems.filter(m => m.categoryId === cat.id).length;
     const msg = itemsInCat > 0
       ? `หมวดนี้มี ${itemsInCat} เมนู หากลบ เมนูเหล่านั้นจะถูกลบไปด้วย ยืนยันลบ?`
       : `ยืนยันการลบหมวด "${cat.name}"?`;
     if (confirm(msg)) {
-      menuItems
-        .filter(m => m.categoryId === cat.id)
-        .forEach(m => deleteMenuItem(m.id));
-      deleteCategory(cat.id);
+      await Promise.all(menuItems.filter(m => m.categoryId === cat.id).map(m => deleteMenuItem(m.id)));
+      await deleteCategory(cat.id);
       toast({ title: "ลบหมวดหมู่แล้ว" });
     }
   };

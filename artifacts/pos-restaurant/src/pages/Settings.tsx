@@ -28,8 +28,8 @@ export default function Settings() {
     }
   };
 
-  const handleSave = () => {
-    setSettings(formData);
+  const handleSave = async () => {
+    await setSettings(formData);
     toast({
       title: "บันทึกการตั้งค่าแล้ว",
       description: "ข้อมูลร้านค้าถูกอัปเดตเรียบร้อย",
