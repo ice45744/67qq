@@ -561,13 +561,17 @@ export default function Kitchen() {
 
 // ── Browser notification (helper) ──────────────────────────────────────────
 function showBrowserNotification(orders: Order[]) {
-  if (Notification.permission !== "granted") return;
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   const queueNums = orders.map(o => `#${o.queueNumber}`).join(", ");
   const itemCount = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0);
-  new Notification("🍳 ออเดอร์ใหม่มาแล้ว!", {
-    body: `คิว ${queueNums} · ${itemCount} รายการ`,
-    icon: "/favicon.ico",
-    tag: "new-order",
-    requireInteraction: false,
-  });
+  try {
+    new Notification("🍳 ออเดอร์ใหม่มาแล้ว!", {
+      body: `คิว ${queueNums} · ${itemCount} รายการ`,
+      icon: "/favicon.ico",
+      tag: "new-order",
+      requireInteraction: false,
+    });
+  } catch (_) {
+    // iOS requires ServiceWorker — skip silently; TTS + overlay handle alerting
+  }
 }
