@@ -336,11 +336,11 @@ export default function Home() {
               transition={{ duration: 0.18 }}
               onClick={() => setIsMobileCartOpen(false)}
             />
-            {/* Drawer panel */}
+            {/* Drawer panel — sits above the 84px tab bar */}
             <motion.div
               key="cart-drawer"
-              className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl shadow-2xl flex flex-col"
-              style={{ height: "90svh" }}
+              className="md:hidden fixed left-0 right-0 z-[60] bg-card rounded-t-3xl shadow-2xl flex flex-col"
+              style={{ bottom: 84, height: "calc(90svh - 84px)" }}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
