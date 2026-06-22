@@ -111,7 +111,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div
                 style={{ touchAction: "manipulation" }}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1.5 h-[84px] cursor-pointer transition-colors active:bg-muted/60",
+                  "flex flex-col items-center justify-center gap-1 h-[62px] cursor-pointer transition-colors active:bg-muted/60",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
@@ -138,7 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           target="_blank"
           rel="noopener noreferrer"
           style={{ touchAction: "manipulation" }}
-          className="flex-1 flex flex-col items-center justify-center gap-1.5 h-[84px] text-orange-500 active:bg-orange-50/60 transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-1 h-[62px] text-orange-500 active:bg-orange-50/60 transition-colors"
         >
           <div className="p-2.5 rounded-2xl bg-orange-50">
             <ChefHat className="size-7" />
