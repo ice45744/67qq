@@ -158,10 +158,20 @@ export function BillCloseDialog({ order, open, onOpenChange, onPaid }: BillClose
           )}
 
           {method === "transfer" && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-              <QrCode className="size-10 text-blue-500 mx-auto mb-2" />
-              <p className="font-semibold text-blue-700">ยอด {formatCurrency(total)}</p>
-              <p className="text-xs text-blue-500 mt-1">ลูกค้าโอนเงินผ่านพร้อมเพย์ / QR Code</p>
+            <div className="flex flex-col items-center gap-3 bg-white border border-blue-100 rounded-2xl p-4">
+              <div className="w-full rounded-xl overflow-hidden bg-[#1a4f8a] py-2 text-center">
+                <p className="text-white text-xs font-semibold tracking-wide">THAI QR PAYMENT · PromptPay</p>
+              </div>
+              <img
+                src="/promptpay-qr.jpg"
+                alt="PromptPay QR"
+                className="w-52 h-auto rounded-xl shadow"
+              />
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">ยอดที่ต้องชำระ</p>
+                <p className="text-4xl font-black text-primary mt-0.5">{formatCurrency(total)}</p>
+                <p className="text-xs text-muted-foreground mt-1">รับได้ทุกธนาคาร · คิว #{order.queueNumber}</p>
+              </div>
             </div>
           )}
         </div>
