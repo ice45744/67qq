@@ -6,7 +6,6 @@ import { useCategories, useMenu, useNextQueue, useSettings, CartItem, Order, for
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ReceiptPrintable } from "@/components/ReceiptPrintable";
 
@@ -307,35 +306,66 @@ export default function Home() {
       </div>
 
       {/* Mobile floating cart button */}
-      <div className="md:hidden fixed bottom-[72px] left-0 right-0 p-3 bg-gradient-to-t from-background via-background to-transparent z-40">
-        <Sheet open={isMobileCartOpen} onOpenChange={setIsMobileCartOpen}>
-          <SheetTrigger asChild>
-            <Button
-              className="w-full h-14 rounded-2xl shadow-xl shadow-primary/20 flex justify-between px-6 active-elevate"
-              size="lg"
-            >
-              <div className="flex items-center gap-3">
-                <div className="bg-primary-foreground/20 rounded-full size-8 flex items-center justify-center">
-                  <span className="font-bold">{cart.reduce((s, i) => s + i.qty, 0)}</span>
-                </div>
-                <span className="font-medium">ดูออเดอร์</span>
-              </div>
-              <span className="font-bold text-lg">{formatCurrency(total)}</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[90svh] p-0 flex flex-col rounded-t-3xl sm:max-w-none">
-            <SheetTitle className="sr-only">ตะกร้าสินค้า</SheetTitle>
-            <CartContent
-              cart={cart}
-              nextQueue={nextQueue}
-              total={total}
-              onUpdateQty={updateQty}
-              onRemoveItem={removeItem}
-              onCheckout={handleCheckout}
-            />
-          </SheetContent>
-        </Sheet>
+      <div className="md:hidden fixed bottom-[72px] left-0 right-0 p-3 z-40">
+        <button
+          style={{ touchAction: "manipulation" }}
+          onClick={() => setIsMobileCartOpen(true)}
+          className="w-full h-14 rounded-2xl shadow-xl bg-primary text-primary-foreground flex justify-between items-center px-6 active:scale-[0.97] transition-transform duration-100"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 rounded-full size-8 flex items-center justify-center">
+              <span className="font-bold text-sm">{cart.reduce((s, i) => s + i.qty, 0)}</span>
+            </div>
+            <span className="font-semibold text-base">ดูออเดอร์</span>
+          </div>
+          <span className="font-bold text-lg">{formatCurrency(total)}</span>
+        </button>
       </div>
+
+      {/* Mobile cart drawer — Framer Motion (no Radix overhead) */}
+      <AnimatePresence>
+        {isMobileCartOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="cart-backdrop"
+              className="md:hidden fixed inset-0 bg-black/40 z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setIsMobileCartOpen(false)}
+            />
+            {/* Drawer panel */}
+            <motion.div
+              key="cart-drawer"
+              className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl shadow-2xl flex flex-col"
+              style={{ height: "90svh" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 38, mass: 0.8 }}
+            >
+              {/* Drag handle */}
+              <button
+                style={{ touchAction: "manipulation" }}
+                onClick={() => setIsMobileCartOpen(false)}
+                className="flex justify-center pt-3 pb-1 w-full"
+              >
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+              </button>
+              <CartContent
+                cart={cart}
+                nextQueue={nextQueue}
+                total={total}
+                onUpdateQty={updateQty}
+                onRemoveItem={removeItem}
+                onCheckout={handleCheckout}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Order confirmed dialog */}
       <Dialog open={!!confirmedOrder} onOpenChange={(v) => { if (!v) handleCloseConfirm(); }}>
