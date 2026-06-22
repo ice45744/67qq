@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed, BellRing } from "lucide-react";
+import { ChefHat, CheckCircle2, Clock, Bell, UtensilsCrossed, BellRing, BellOff, Volume2, VolumeX } from "lucide-react";
 import { useOrders, useSettings, formatCurrency } from "@/lib/store";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -26,26 +26,46 @@ function isUrgent(isoString: string) {
   return (Date.now() - new Date(isoString).getTime()) > 10 * 60 * 1000;
 }
 
-/** Play a short notification beep via Web Audio API — no file needed */
+// Shared AudioContext — created once on user gesture, reused for all beeps
+let sharedCtx: AudioContext | null = null;
+
+function getAudioCtx(): AudioContext | null {
+  if (!sharedCtx) {
+    try { sharedCtx = new AudioContext(); } catch (_) { return null; }
+  }
+  return sharedCtx;
+}
+
 function playBeep() {
-  try {
-    const ctx = new AudioContext();
-    const times = [0, 0.18, 0.36];
-    times.forEach((t) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0, ctx.currentTime + t);
-      gain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + t + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.15);
-    });
-    setTimeout(() => ctx.close(), 1000);
-  } catch (_) {}
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") { ctx.resume(); }
+  const times = [0, 0.2, 0.4];
+  times.forEach((t) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0, ctx.currentTime + t);
+    gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.16);
+    osc.start(ctx.currentTime + t);
+    osc.stop(ctx.currentTime + t + 0.17);
+  });
+}
+
+function showBrowserNotification(orders: Order[]) {
+  if (Notification.permission !== "granted") return;
+  const queueNums = orders.map(o => `#${o.queueNumber}`).join(", ");
+  const itemCount = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + i.qty, 0), 0);
+  new Notification("🍳 ออเดอร์ใหม่มาแล้ว!", {
+    body: `คิว ${queueNums} · ${itemCount} รายการ`,
+    icon: "/favicon.ico",
+    tag: "new-order",
+    requireInteraction: false,
+  });
 }
 
 export default function Kitchen() {
@@ -57,6 +77,12 @@ export default function Kitchen() {
   const isFirstLoad = useRef(true);
   const [newOrderBanner, setNewOrderBanner] = useState<Order[]>([]);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sound & notification permission state
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
 
   const activeOrders = useMemo(() =>
     orders
@@ -73,14 +99,28 @@ export default function Kitchen() {
     [orders]
   );
 
-  // Detect new pending orders
+  // Request notification permission
+  const requestNotifPermission = useCallback(async () => {
+    if (typeof Notification === "undefined") return;
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+  }, []);
+
+  // Unlock sound on user gesture
+  const unlockSound = useCallback(() => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === "suspended") ctx.resume();
+    setSoundEnabled(true);
+    // Play a short test beep to confirm
+    playBeep();
+  }, []);
+
+  // Detect new pending orders → beep + banner + browser notification
   useEffect(() => {
     const incoming: Order[] = [];
     orders.forEach(o => {
-      if (o.status === "pending" && !knownIds.current.has(o.id)) {
-        if (!isFirstLoad.current) incoming.push(o);
-        knownIds.current.add(o.id);
-      } else {
+      if (!knownIds.current.has(o.id)) {
+        if (!isFirstLoad.current && o.status === "pending") incoming.push(o);
         knownIds.current.add(o.id);
       }
     });
@@ -91,15 +131,16 @@ export default function Kitchen() {
     }
 
     if (incoming.length > 0) {
-      playBeep();
+      if (soundEnabled) playBeep();
+      showBrowserNotification(incoming);
       setNewOrderBanner(incoming);
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
-      bannerTimer.current = setTimeout(() => setNewOrderBanner([]), 5000);
+      bannerTimer.current = setTimeout(() => setNewOrderBanner([]), 6000);
     }
-  }, [orders]);
+  }, [orders, soundEnabled]);
 
-  const markCooking = (order: Order) => updateOrder({ ...order, status: "cooking" } as Order);
-  const markReady   = (order: Order) => updateOrder({ ...order, status: "ready" } as Order);
+  const markCooking = useCallback((order: Order) => updateOrder({ ...order, status: "cooking" } as Order), [updateOrder]);
+  const markReady   = useCallback((order: Order) => updateOrder({ ...order, status: "ready" } as Order), [updateOrder]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -114,7 +155,53 @@ export default function Kitchen() {
             <p className="text-gray-400 text-xs mt-0.5 truncate">{settings.name}</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
+          {/* Sound toggle */}
+          <button
+            onClick={soundEnabled ? () => setSoundEnabled(false) : unlockSound}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-medium transition-colors",
+              soundEnabled
+                ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                : "bg-gray-700/60 text-gray-400 hover:bg-gray-700"
+            )}
+            title={soundEnabled ? "ปิดเสียง" : "เปิดเสียง"}
+          >
+            {soundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
+            <span className="hidden sm:inline">{soundEnabled ? "เสียงเปิด" : "เปิดเสียง"}</span>
+          </button>
+
+          {/* Browser notification toggle */}
+          <button
+            onClick={requestNotifPermission}
+            disabled={notifPermission === "granted"}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm font-medium transition-colors",
+              notifPermission === "granted"
+                ? "bg-green-500/20 text-green-400 cursor-default"
+                : notifPermission === "denied"
+                ? "bg-red-500/20 text-red-400 cursor-not-allowed"
+                : "bg-gray-700/60 text-gray-400 hover:bg-gray-700 cursor-pointer"
+            )}
+            title={
+              notifPermission === "granted" ? "แจ้งเตือนเปิดแล้ว"
+              : notifPermission === "denied" ? "ถูกบล็อกโดย browser"
+              : "กดเพื่อเปิดแจ้งเตือน"
+            }
+          >
+            {notifPermission === "granted"
+              ? <BellRing className="size-3.5" />
+              : notifPermission === "denied"
+              ? <BellOff className="size-3.5" />
+              : <Bell className="size-3.5" />}
+            <span className="hidden sm:inline">
+              {notifPermission === "granted" ? "แจ้งเตือนเปิด"
+               : notifPermission === "denied" ? "ถูกบล็อก"
+               : "เปิดแจ้งเตือน"}
+            </span>
+          </button>
+
           <div className="flex items-center gap-1.5 bg-orange-500/20 text-orange-400 px-2.5 py-1.5 rounded-full text-sm">
             <Bell className="size-3.5" />
             <span className="font-bold">{activeOrders.length}</span>
@@ -127,6 +214,26 @@ export default function Kitchen() {
           </div>
         </div>
       </header>
+
+      {/* Setup prompt — shown once if neither sound nor notif is enabled */}
+      {!soundEnabled && notifPermission !== "granted" && (
+        <div className="bg-gray-800/80 border-b border-gray-700 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm">ตั้งค่าการแจ้งเตือนก่อนใช้งาน</p>
+            <p className="text-gray-400 text-xs mt-0.5">เปิดเสียงและแจ้งเตือนเพื่อรับออเดอร์ใหม่ได้ทันที</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" onClick={unlockSound} className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5">
+              <Volume2 className="size-3.5" /> เปิดเสียง
+            </Button>
+            {notifPermission !== "denied" && (
+              <Button size="sm" onClick={requestNotifPermission} className="bg-orange-600 hover:bg-orange-500 text-white gap-1.5">
+                <Bell className="size-3.5" /> เปิดแจ้งเตือน
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 🔔 New order notification banner */}
       <AnimatePresence>
@@ -197,7 +304,6 @@ export default function Kitchen() {
                           : "bg-gray-900 border-gray-700"
                       )}
                     >
-                      {/* Queue number + status */}
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -226,7 +332,6 @@ export default function Kitchen() {
                         <span className="text-gray-400 text-sm font-medium">{formatCurrency(order.total)}</span>
                       </div>
 
-                      {/* Items */}
                       <div className="border-t border-gray-700/60 pt-3 space-y-2">
                         {order.items.map((item, i) => (
                           <div key={i} className="flex justify-between items-center">
@@ -244,7 +349,6 @@ export default function Kitchen() {
                         </div>
                       )}
 
-                      {/* Action buttons */}
                       <div className="flex gap-2 mt-1">
                         {order.status === "pending" && (
                           <Button
