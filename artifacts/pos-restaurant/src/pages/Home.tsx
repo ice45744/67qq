@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, memo, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed, CheckCircle2, ChefHat } from "lucide-react";
+import { Plus, Minus, X, ShoppingBag, Receipt, Printer, UtensilsCrossed, CheckCircle2, ChefHat, QrCode } from "lucide-react";
 import { useCategories, useMenu, useNextQueue, useSettings, CartItem, Order, formatCurrency } from "@/lib/store";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -139,6 +139,7 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const [showQR, setShowQR] = useState(false);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -396,13 +397,46 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex gap-3 px-5 py-4">
+          <div className="flex gap-2 px-5 py-4">
             <Button variant="outline" className="flex-1 h-11" onClick={handleCloseConfirm}>
               ปิด
             </Button>
-            <Button className="flex-1 h-11 gap-2" onClick={handlePrint}>
+            <Button variant="outline" className="flex-1 h-11 gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => setShowQR(true)}>
+              <QrCode className="size-4" />
+              โอนเงิน
+            </Button>
+            <Button className="flex-1 h-11 gap-1.5" onClick={handlePrint}>
               <Printer className="size-4" />
-              พิมพ์ใบเสร็จ
+              ใบเสร็จ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PromptPay QR payment dialog */}
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent className="max-w-xs w-[88vw] p-0 rounded-2xl overflow-hidden">
+          <div className="bg-[#1a4f8a] px-5 pt-5 pb-3 text-center">
+            <p className="text-white font-bold text-lg tracking-wide">สแกนโอนเงิน</p>
+            <p className="text-blue-200 text-sm">PromptPay · รับได้ทุกธนาคาร</p>
+          </div>
+          <div className="flex flex-col items-center gap-3 px-5 py-4 bg-white">
+            <img
+              src="/promptpay-qr.jpg"
+              alt="PromptPay QR"
+              className="w-56 h-auto rounded-xl shadow-md"
+            />
+            {confirmedOrder && (
+              <div className="text-center">
+                <p className="text-muted-foreground text-sm">ยอดที่ต้องชำระ</p>
+                <p className="text-3xl font-black text-primary mt-0.5">
+                  {formatCurrency(confirmedOrder.total)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">คิว #{confirmedOrder.queueNumber}</p>
+              </div>
+            )}
+            <Button className="w-full h-11 mt-1" onClick={() => { setShowQR(false); handleCloseConfirm(); }}>
+              ชำระเงินแล้ว
             </Button>
           </div>
         </DialogContent>
