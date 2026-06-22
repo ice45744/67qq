@@ -11,6 +11,8 @@ import { BillCloseDialog } from "@/components/BillCloseDialog";
 import { cn } from "@/lib/utils";
 import { OrderStatus } from "@/lib/types";
 
+type PaidConfirm = { order: Order; cashReceived?: number; change?: number };
+
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
   pending:  { label: "รอห้องครัว",  color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   cooking:  { label: "กำลังทำ",     color: "bg-orange-100 text-orange-800 border-orange-200" },
@@ -27,7 +29,8 @@ export default function Orders() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [tab, setTab] = useState<"active" | "all">("active");
-  const [receiptInfo, setReceiptInfo] = useState<{ order: Order; cashReceived?: number; change?: number } | null>(null);
+  const [paidConfirm, setPaidConfirm] = useState<PaidConfirm | null>(null);
+  const [printingReceipt, setPrintingReceipt] = useState<PaidConfirm | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const activeOrders = useMemo(() =>
@@ -52,13 +55,18 @@ export default function Orders() {
   };
 
   const handlePaid = (order: Order, cashReceived?: number, change?: number) => {
-    // Dialog is already closed by BillCloseDialog before calling this
-    // Now trigger print from page level (no dialog overlay interference)
-    setReceiptInfo({ order, cashReceived, change });
+    // Show confirm dialog with print/close options — no auto-print
+    setPaidConfirm({ order, cashReceived, change });
+  };
+
+  const handlePrintReceipt = () => {
+    if (!paidConfirm) return;
+    setPrintingReceipt(paidConfirm);
+    setPaidConfirm(null);
     setTimeout(() => {
       window.print();
-      setTimeout(() => setReceiptInfo(null), 600);
-    }, 200);
+      setTimeout(() => setPrintingReceipt(null), 600);
+    }, 150);
   };
 
   const statusCounts = useMemo(() => ({
@@ -303,19 +311,71 @@ export default function Orders() {
         </DialogContent>
       </Dialog>
 
+      {/* ✅ Paid confirmation dialog — choose to print or just close */}
+      <Dialog open={!!paidConfirm} onOpenChange={(v) => { if (!v) setPaidConfirm(null); }}>
+        <DialogContent className="max-w-sm w-[92vw] p-0 rounded-2xl overflow-hidden">
+          <div className="bg-green-50 px-6 pt-6 pb-4 text-center">
+            <div className="size-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="size-9 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-green-800">ชำระเงินแล้ว!</h2>
+            <p className="text-green-700 text-sm mt-1">
+              คิว <span className="font-black text-3xl text-green-600">#{paidConfirm?.order.queueNumber}</span>
+            </p>
+          </div>
+
+          {paidConfirm && (
+            <div className="px-5 py-3 space-y-1.5 border-b">
+              {paidConfirm.order.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{item.name} <span className="font-semibold text-foreground">x{item.qty}</span></span>
+                  <span className="font-medium">{formatCurrency(item.price * item.qty)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between font-bold text-base pt-1 border-t mt-2">
+                <span>ยอดรวม</span>
+                <span className="text-primary">{formatCurrency(paidConfirm.order.total)}</span>
+              </div>
+              {paidConfirm.cashReceived !== undefined && paidConfirm.cashReceived > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>รับเงิน</span>
+                  <span>{formatCurrency(paidConfirm.cashReceived)}</span>
+                </div>
+              )}
+              {paidConfirm.change !== undefined && paidConfirm.change > 0 && (
+                <div className="flex justify-between text-sm font-bold text-green-700">
+                  <span>เงินทอน</span>
+                  <span>{formatCurrency(paidConfirm.change)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3 px-5 py-4">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setPaidConfirm(null)}>
+              ปิด
+            </Button>
+            <Button className="flex-1 h-11 gap-2" onClick={handlePrintReceipt}>
+              <Printer className="size-4" />
+              พิมพ์ใบเสร็จ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Receipt for re-print from preview */}
-      {selectedOrder && !isPreviewOpen && !isBillOpen && !receiptInfo && (
+      {selectedOrder && !isPreviewOpen && !isBillOpen && !paidConfirm && (
         <ReceiptPrintable ref={printRef} order={selectedOrder} settings={settings} />
       )}
 
-      {/* Receipt after bill close — printed after dialog closes */}
-      {receiptInfo && (
+      {/* Receipt after bill close — only printed when user taps "พิมพ์ใบเสร็จ" */}
+      {printingReceipt && (
         <ReceiptPrintable
           ref={printRef}
-          order={receiptInfo.order}
+          order={printingReceipt.order}
           settings={settings}
-          cashReceived={receiptInfo.cashReceived}
-          change={receiptInfo.change}
+          cashReceived={printingReceipt.cashReceived}
+          change={printingReceipt.change}
         />
       )}
     </div>
