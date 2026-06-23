@@ -36,3 +36,8 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+IMGBB_API_KEY = "baf409d03cf4975986f6d44b5a1a2919"

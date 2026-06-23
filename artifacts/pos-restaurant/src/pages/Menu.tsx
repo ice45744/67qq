@@ -87,19 +87,15 @@ export default function MenuAdmin() {
     if (!file) return;
     setUploading(true);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch("/api/upload", {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch("https://api.imgbb.com/1/upload?key=baf409d03cf4975986f6d44b5a1a2919", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64 }),
+        body: form,
       });
-      if (!res.ok) throw new Error("upload failed");
-      const { url } = await res.json();
-      setImageUrl(url);
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error("upload failed");
+      setImageUrl(data.data.display_url);
     } catch {
       toast({ variant: "destructive", title: "อัปโหลดรูปไม่สำเร็จ" });
     } finally {
