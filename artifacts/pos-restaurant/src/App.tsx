@@ -9,11 +9,13 @@ import Orders from "@/pages/Orders";
 import MenuAdmin from "@/pages/Menu";
 import Settings from "@/pages/Settings";
 import Kitchen from "@/pages/Kitchen";
+import CustomerOrder from "@/pages/CustomerOrder";
 
 function Router() {
   return (
     <Switch>
       <Route path="/kitchen" component={Kitchen} />
+      <Route path="/order" component={CustomerOrder} />
       <Route>
         <Layout>
           <Switch>
