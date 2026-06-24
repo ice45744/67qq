@@ -5,7 +5,7 @@ import { broadcast } from "../lib/sse.js";
 const router = Router();
 
 const DEFAULT_SETTINGS = {
-  name: "ร้านของฉัน",
+  name: "ร้านหม่าล่าทอด",
   footerMessage: "ขอบคุณที่ใช้บริการ",
   logoDataUrl: "",
 };

@@ -8,6 +8,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/lib/store";
 
 const navItems = [
   { href: "/",         icon: Store,          label: "ขาย",    fullLabel: "ขายหน้าร้าน" },
@@ -25,7 +26,9 @@ const pageTitle: Record<string, string> = {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const currentTitle = pageTitle[location] ?? "อร่อยPOS";
+  const { settings } = useSettings();
+  const shopName = settings.name || "ร้านหม่าล่าทอด";
+  const currentTitle = pageTitle[location] ?? shopName;
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-muted/30">
@@ -36,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="bg-primary text-primary-foreground p-2 rounded-xl shrink-0">
             <Store className="size-6" />
           </div>
-          <span className="font-bold text-xl hidden lg:block tracking-tight">อร่อยPOS</span>
+          <span className="font-bold text-xl hidden lg:block tracking-tight">{shopName}</span>
         </div>
 
         <nav className="flex-1 flex flex-col gap-1 p-3">
@@ -80,7 +83,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Store className="size-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground leading-none mb-0.5">อร่อยPOS</p>
+          <p className="text-xs text-muted-foreground leading-none mb-0.5">{shopName}</p>
           <p className="font-bold text-sm leading-none truncate">{currentTitle}</p>
         </div>
         <a

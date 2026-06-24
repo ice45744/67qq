@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, ordersTable, settingsTable } from "@workspace/db";
+import { db, ordersTable, settingsTable, menuItemsTable } from "@workspace/db";
 import { broadcast } from "../lib/sse.js";
 
 const router = Router();
@@ -11,11 +11,26 @@ router.get("/orders", async (_req, res) => {
 });
 
 router.post("/orders", async (req, res) => {
-  const { id, queueNumber, items, total, status, tableNote } = req.body;
+  const { id, queueNumber, items, total, status, tableNote, source } = req.body;
   const [row] = await db.insert(ordersTable)
-    .values({ id, queueNumber, items, total, status: status ?? "pending", tableNote })
+    .values({ id, queueNumber, items, total, status: status ?? "pending", tableNote, source: source ?? "staff" })
     .returning();
   broadcast("orders:new", row);
+
+  // Decrement stock for each item ordered — if stock hits 0, mark unavailable
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      const [menuItem] = await db.select().from(menuItemsTable).where(eq(menuItemsTable.id, item.menuItemId));
+      if (!menuItem || menuItem.stock === null || menuItem.stock === undefined) continue;
+      const newStock = Math.max(0, menuItem.stock - item.qty);
+      const [updated] = await db.update(menuItemsTable)
+        .set({ stock: newStock, available: newStock > 0 ? menuItem.available : false })
+        .where(eq(menuItemsTable.id, item.menuItemId))
+        .returning();
+      broadcast("menu:update", updated);
+    }
+  }
+
   // Notify queue counter watchers
   const today2 = new Date(); today2.setHours(0, 0, 0, 0);
   const allToday = await db.select().from(ordersTable)
@@ -42,7 +57,6 @@ router.put("/orders/:id", async (req, res) => {
 });
 
 router.get("/orders/today-count", async (_req, res) => {
-  // Use queueResetAt if set, otherwise start of today
   const resetRow = await db.select().from(settingsTable).where(eq(settingsTable.key, "queueResetAt"));
   const resetAt = resetRow[0]?.value ?? null;
   const today = new Date();

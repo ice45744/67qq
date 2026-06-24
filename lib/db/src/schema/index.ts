@@ -22,6 +22,7 @@ export const menuItemsTable = pgTable("menu_items", {
   description: text("description"),
   imageUrl: text("image_url"),
   available: boolean("available").notNull().default(true),
+  stock: integer("stock"),
 });
 
 export const ordersTable = pgTable("orders", {
@@ -32,6 +33,7 @@ export const ordersTable = pgTable("orders", {
   total: real("total").notNull(),
   status: text("status").notNull().default("pending"),
   tableNote: text("table_note"),
+  source: text("source").notNull().default("staff"),
 });
 
 export const settingsTable = pgTable("settings", {

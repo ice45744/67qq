@@ -14,6 +14,7 @@ export type MenuItem = {
   description?: string | null;
   imageUrl?: string | null;
   available: boolean;
+  stock?: number | null;
 };
 
 export type CartItem = {
@@ -34,6 +35,7 @@ export type Order = {
   total: number;
   status: OrderStatus;
   tableNote?: string | null;
+  source?: string | null;
 };
 
 export type ShopSettings = {

@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Search, Printer, Eye, ChefHat, CheckCircle2, Clock, Banknote, ExternalLink } from "lucide-react";
+import { Search, Printer, Eye, ChefHat, CheckCircle2, Clock, Banknote, ExternalLink, Smartphone, UserCog } from "lucide-react";
 import { useOrders, useSettings, Order, formatCurrency } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,7 +186,18 @@ export default function Orders() {
               return (
                 <div key={order.id} className="bg-card border rounded-2xl p-4 space-y-3 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-black text-primary">#{order.queueNumber}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-black text-primary">#{order.queueNumber}</span>
+                      {order.source === "customer" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                          <Smartphone className="size-2.5" /> ลูกค้าสั่งเอง
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                          <UserCog className="size-2.5" /> พนักงาน
+                        </span>
+                      )}
+                    </div>
                     <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border", cfg.color)}>
                       {cfg.label}
                     </span>
@@ -249,7 +260,20 @@ export default function Orders() {
                     const cfg = STATUS_CONFIG[order.status as OrderStatus] ?? STATUS_CONFIG.paid;
                     return (
                       <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-black text-primary text-xl">#{order.queueNumber}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-primary text-xl">#{order.queueNumber}</span>
+                            {order.source === "customer" ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                                <Smartphone className="size-2.5" /> ลูกค้า
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                                <UserCog className="size-2.5" /> พนักงาน
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">{format(new Date(order.createdAt), "dd MMM HH:mm", { locale: th })}</td>
                         <td className="px-4 py-3 max-w-xs">
                           <span className="line-clamp-2 text-sm">{order.items.map(i => `${i.name} x${i.qty}`).join(", ")}</span>

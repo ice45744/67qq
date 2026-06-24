@@ -185,6 +185,7 @@ export default function Home() {
       items: [...cart],
       total,
       status: "pending",
+      source: "staff",
     });
     setCart([]);
     setIsMobileCartOpen(false);

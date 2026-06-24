@@ -23,6 +23,7 @@ export default function MenuAdmin() {
   const [categoryId, setCategoryId] = useState("");
   const [available, setAvailable] = useState(true);
   const [imageUrl, setImageUrl] = useState("");
+  const [stock, setStock] = useState<string>("");
 
   const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
@@ -35,6 +36,7 @@ export default function MenuAdmin() {
     setCategoryId(categories[0]?.id || "");
     setAvailable(true);
     setImageUrl("");
+    setStock("");
     setIsDialogOpen(true);
   };
 
@@ -45,6 +47,7 @@ export default function MenuAdmin() {
     setCategoryId(item.categoryId);
     setAvailable(item.available);
     setImageUrl(item.imageUrl || "");
+    setStock(item.stock != null ? String(item.stock) : "");
     setIsDialogOpen(true);
   };
 
@@ -54,13 +57,15 @@ export default function MenuAdmin() {
       return;
     }
 
+    const stockNum = stock.trim() !== "" ? Number(stock) : null;
     const payload: MenuItem = {
       id: editingItem ? editingItem.id : `menu-${Date.now()}`,
       name,
       price: Number(price),
       categoryId,
-      available,
-      imageUrl: imageUrl || undefined
+      available: stockNum !== null ? stockNum > 0 : available,
+      imageUrl: imageUrl || undefined,
+      stock: stockNum,
     };
 
     if (editingItem) {
@@ -255,9 +260,16 @@ export default function MenuAdmin() {
                           </div>
                           <div className="text-primary font-bold">{formatCurrency(item.price)}</div>
                           <div className="mt-auto flex justify-between items-center pt-2">
-                            <Badge variant={item.available ? "outline" : "destructive"} className="text-[10px] px-1.5 h-5">
-                              {item.available ? 'พร้อมขาย' : 'หมด'}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant={item.available ? "outline" : "destructive"} className="text-[10px] px-1.5 h-5">
+                                {item.available ? 'พร้อมขาย' : 'หมด'}
+                              </Badge>
+                              {item.stock != null && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+                                  สต็อก {item.stock}
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)}>
                                 <Edit2 className="size-4" />
@@ -328,13 +340,27 @@ export default function MenuAdmin() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-xl mt-4">
-              <div className="space-y-0.5">
-                <Label>สถานะพร้อมขาย</Label>
-                <p className="text-xs text-muted-foreground">ปิดเมื่อวัตถุดิบหมด</p>
-              </div>
-              <Switch checked={available} onCheckedChange={setAvailable} />
+            <div className="space-y-2">
+              <Label>จำนวนสต็อก (ไม่บังคับ)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={stock}
+                onChange={e => setStock(e.target.value)}
+                placeholder="ว่าง = ไม่จำกัด"
+              />
+              <p className="text-xs text-muted-foreground">ถ้าใส่จำนวน ระบบจะลดสต็อกอัตโนมัติเมื่อมีออเดอร์ และหมดแล้วขายไม่ได้</p>
             </div>
+
+            {stock.trim() === "" && (
+              <div className="flex items-center justify-between p-3 border rounded-xl">
+                <div className="space-y-0.5">
+                  <Label>สถานะพร้อมขาย</Label>
+                  <p className="text-xs text-muted-foreground">ปิดเมื่อวัตถุดิบหมด</p>
+                </div>
+                <Switch checked={available} onCheckedChange={setAvailable} />
+              </div>
+            )}
 
           </div>
           <DialogFooter>

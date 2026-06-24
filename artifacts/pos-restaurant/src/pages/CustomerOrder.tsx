@@ -80,6 +80,7 @@ export default function CustomerOrder() {
         items: [...cart],
         total,
         status: "pending",
+        source: "customer",
         tableNote: tableNote.trim() || undefined,
       });
       setQueueNum(queueNumber);
